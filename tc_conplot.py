@@ -77,7 +77,7 @@ def plotdata(path,current_file,this_sat,lthres):
     plt.axvline(x=0, color='r')
     #
     plt.hist(his[:,0], bins = np.arange(min(his[:,0]), max(his[:,0])+1))
-    #plt.xlabel(u'ΔT / hours', fontsize  = 30)
+    #plt.xlabel(u'dT / hours', fontsize  = 30)
     plt.ylabel('Number of events', fontsize = 16)
     plt.setp(ax1.get_xticklabels(), visible=False)
     
@@ -101,7 +101,7 @@ def plotdata(path,current_file,this_sat,lthres):
     #
     plt.scatter(his[:,0], his[:,2])
     plt.ylabel('Satellite L shell', fontsize = 16)
-    plt.xlabel(u'ΔT / hours', fontsize  = 16)
+    plt.xlabel(u'dT / hours', fontsize  = 16)
     
     plt.savefig(path+slthres+'_histo.png')
     #plt.show()
