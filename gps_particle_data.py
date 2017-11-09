@@ -1521,12 +1521,12 @@ class satellite_map_plot:
 # This holds all of the data that searches over all satellites
 # takes (lower, upper, flag) flag 0-lower only; 1-range; 2-lower is list
 class meta_search:
-    #def __init__(self):
-    #def __init__(self, lower, upper): # creates a range from lower to upper.
     def __init__(self, satlist, localpath): # takes a list of the satellites we want
+        #We only want a single satellite.
         self.satellites = list();
-        for x in satlist:
-                self.satellites.append(x)
+        #for x in satlist:
+        #        self.satellites.append(x)
+        self.satellites.append(satlist)
 
         self.satellites_data = list();
         self.searches = list();
@@ -2275,7 +2275,7 @@ class gps_satellite_data_download:
     def download_sat(self,this_sat):
         filenames = self.get_datafiles_in_date(this_sat)
         if(filenames==list()):
-            return;
+            return 0;
             
         print; 
         print '====================================';

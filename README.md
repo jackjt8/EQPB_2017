@@ -9,6 +9,7 @@ aacgmv2
 scipy
 matplotlib
 mpl_toolkits.basemap
+PeakUtils
 
 Main modules:
 gps_particle_dataMOD	-	Obtains and manages GPS data 
