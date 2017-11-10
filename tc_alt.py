@@ -31,7 +31,7 @@ warnings.simplefilter("ignore", RuntimeWarning)
 #%%
 
 def tc_fw((localpath, n, dday, ls, indices, L_shells, eq_datetimes, satalt, bcoord, lthres, alt)):
-    print 'Working on %s' % (alt)
+    print 'Working on %s with dL=%s at %s' % (n,lthres,alt)
     start_time = time.clock()
     # setup the current file we are using
     # removes deciaml point for lthres
@@ -75,7 +75,7 @@ def mthandler(localpath,n,dday,ls,indices,L_shells,eq_datetimes,satalt,bcoord,L_
     pool.close()
     pool.join()
     
-def main(start_date,end_date,localpath,satlist,L_thres,maxsizeondisk,alt2test,threads):
+def main(start_date,end_date,localpath,satlist,msL_thres,maxsizeondisk,alt2test,threads):
     start_time = time.clock()
     
     localfolder = 'data\\'
@@ -84,24 +84,23 @@ def main(start_date,end_date,localpath,satlist,L_thres,maxsizeondisk,alt2test,th
     valt = 'var_alt\\'
         
     print 'Path on disk: %s' % (localpath)
-    print 'Satlist: %s' % (satlist)
     print 'Start datetime: %s end datetime: %s' % (start_date, end_date)
-    print 'dL Values to test: %s' % (L_thres)
+    print 'Satlist: %s' % (satlist)
+    print 'dL Values to test: %s' % (msL_thres)
     print 'Altitudes to test (in km): %s' % (alt2test)
     print '###'
     
+#    #%%
+#    #Check if gps sat data exists. Download if missing.
+#    gps_particle_data.gps_satellite_data_download(start_date,end_date,satlist,localpath,maxsizeondisk)
+    
     for this_sat in satlist:
-        
-        #%%
-        #Check if gps sat data exists. Download if missing.
-        gps_particle_data.gps_satellite_data_download(start_date,end_date,satlist,localpath,maxsizeondisk)
-        
-        
+    
         #%%
         print ''
         print 'Working on %s...' % (this_sat)
         # Load data.
-        ms = gps_particle_data.meta_search(satlist,localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
+        ms = gps_particle_data.meta_search(this_sat,localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
         ms.load_local_data(start_date,end_date)
         ms.clean_up() #deletes json files.
         print ''
@@ -172,11 +171,13 @@ def main(start_date,end_date,localpath,satlist,L_thres,maxsizeondisk,alt2test,th
         #n,dday,ls,indices,L_shells,eq_datetimes,L_thres,threads
         #n,dday,ls,indices,L_shells,eq_datetimes,satalt,bcoord,L_thres,threads
         i = 0
-        for lthres in L_thres:
-            for cur_l in lthres:
-                mthandler(localpath,this_sat,dday,ls,indices,L_shells,eq_datetimes,satalt,bcoord,cur_l,alt2test,threads)
-                i += 1
-                print 'Completed %s/%s dLs in %s' % (i,len(lthres),time.clock() - start_time)
+        curindex = satlist.index(this_sat)
+        print len(msL_thres[curindex])
+        for lthres in msL_thres[curindex]:
+            mthandler(localpath,this_sat,dday,ls,indices,L_shells,eq_datetimes,satalt,bcoord,lthres,alt2test,threads)
+            i += 1
+            print 'ns%s alt tested %s | %s/%s dLs in %s' % (this_sat,lthres,i,len(msL_thres[curindex]),time.clock() - start_time)
+
         print 'Time to complete dL testing for %s: %s' % (this_sat, time.clock() - start_time)
         print '%s finished, moving on...' % (this_sat)
         print ''

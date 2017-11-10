@@ -30,7 +30,7 @@ def get_conflvl(path, current_file, this_sat, lthres):
     bins = np.arange(min(curdata[:,0]), max(curdata[:,0])+1)
     hist, bin_edges = np.histogram(curdata[:,0],bins)
     
-    print hist # number of items per bin
+    #print hist # number of items per bin
     #print bin_edges # interval of each bin.
     
     # n{sig} = (Nmax - Nbg/{sig})     taken from S. Yu Aleksandrin et al.: High-energy charged particle bursts
@@ -45,11 +45,11 @@ def get_conflvl(path, current_file, this_sat, lthres):
     #nsig = (max(hist) - min(hist[hist!=0]))/float(len(hist))
     nsig = (Nmax - Nbg)/sig # Confidence between 2~2.5 :: wrong shape.
     
-    ourstring = 'dL value: %s --- Conf Level: %s' % (lthres, nsig)
-    print ourstring
-    print 'Nmax, Nbg, sig, nsig'
-    print Nmax, Nbg, sig, nsig
-    #print min(hist[hist!=0])
+#    ourstring = 'dL value: %s --- Conf Level: %s' % (lthres, nsig)
+#    print ourstring
+#    print 'Nmax, Nbg, sig, nsig'
+#    print Nmax, Nbg, sig, nsig
+#    #print min(hist[hist!=0])
     return nsig
 
 def plotdata(path,current_file,this_sat,lthres):
@@ -132,6 +132,7 @@ def smooth(y, box_pts):
     return y_smooth
 
 def get_confpeaks(localpath,this_sat):
+    print 'get_confpeaks'
     localfolder = 'data\\'
     rawf = 'raw\\'
     vdl = 'var_dL\\'
@@ -144,7 +145,8 @@ def get_confpeaks(localpath,this_sat):
     
     for i in range(len(filelist)):
         conflvl.append(get_conflvl(path,filelist[i],this_sat,L_thres[i]))
-    cb = np.array(smooth(conflvl,5))
+    #cb = np.array(smooth(conflvl,5))
+    cb = np.array(conflvl)
     indices = peakutils.indexes(cb, thres=0.02/max(cb), min_dist=0.1)
     for lthres in indices:
         new_L.append(L_thres[lthres])
@@ -168,7 +170,8 @@ def auto_plot(localpath,this_sat):
         conflvl.append(get_conflvl(path,filelist[i],this_sat,L_thres[i]))
     
     fig = plt.figure(figsize=(13, 13))
-    plt.plot(L_thres, conflvl)    
+    plt.plot(L_thres, conflvl)
+    #plt.plot(L_thres,smooth(conflvl,3))    
     plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
     plt.grid(True)
     plttitle = 'Confidence level with differing {delta}L values for Satellite %s' % (this_sat)
@@ -183,5 +186,11 @@ def auto_plot(localpath,this_sat):
 
 #if __name__ == '__main__':
 #    localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'
-#    this_sat=41
-#    auto_plot(localpath,this_sat)
+#    satlist = [48,53,54,55]
+#    msL_thres = [[0.03, 0.1,1.5], [], [0.07,0.1],[1]]
+#    for this_sat in satlist:
+#        i = 0
+#        curindex = satlist.index(this_sat)
+#        for lthres in msL_thres[curindex]:
+#            i += 1
+#            print 'Alt tested %s | %s/%s dLs' % (lthres,i,len(msL_thres[curindex]))
