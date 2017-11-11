@@ -1,1 +1,8 @@
+# ignore \data\ as it can be 64GB+
 data/
+# ignore complied code
+*.pyc
+# ignore generated files
+*.ascii
+*.json
+

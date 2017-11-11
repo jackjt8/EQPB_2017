@@ -104,8 +104,8 @@ def main(start_date,end_date,localpath,satlist,L_thres,maxsizeondisk,threads):
     print '###'
     
     #%%
-    #Check if gps sat data exists. Download if missing.
-    gps_particle_data.gps_satellite_data_download(start_date,end_date,satlist,localpath,maxsizeondisk)
+    ##Check if gps sat data exists. Download if missing.
+    #gps_particle_data.gps_satellite_data_download(start_date,end_date,satlist,localpath,maxsizeondisk)
     
     #main loop
     for this_sat in satlist:

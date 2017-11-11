@@ -41,6 +41,7 @@ def tc_fw((localpath, n, dday, ls, indices, L_shells, eq_datetimes, satalt, bcoo
 
     his_data = [] #not sure this one is necessary?
     #trying to match EQ and PB based on two conditions: delta T < 0.5 days and delta L (in this case) < 1
+    print 'indices = %s ; L_shells = %s ; indices*L_shells = %s' % (len(indices),len(L_shells),len(indices)*len(L_shells))
     for i in indices:
         for j in range(len(L_shells)):
             #datet was date
@@ -172,7 +173,7 @@ def main(start_date,end_date,localpath,satlist,msL_thres,maxsizeondisk,alt2test,
         #n,dday,ls,indices,L_shells,eq_datetimes,satalt,bcoord,L_thres,threads
         i = 0
         curindex = satlist.index(this_sat)
-        print len(msL_thres[curindex])
+        #print len(msL_thres[curindex])
         for lthres in msL_thres[curindex]:
             mthandler(localpath,this_sat,dday,ls,indices,L_shells,eq_datetimes,satalt,bcoord,lthres,alt2test,threads)
             i += 1
