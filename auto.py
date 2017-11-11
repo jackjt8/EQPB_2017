@@ -29,12 +29,12 @@ def main():
     tc_dlmp.main(start_date,end_date,localpath,satlist,L_thres,maxsizeondisk,threads)
     
     # Get the L value(s) corrisponding to the peak confidence level for each satellite
-   msL_thres = []
-   i = 0
-   for this_sat in satlist:
-       msL_thres.append(tc_conplot.get_confpeaks(localpath,this_sat))
-       print 'Peaks for ns%s: %s' % (this_sat,msL_thres[i])
-       i += 1
+    msL_thres = []
+    i = 0
+    for this_sat in satlist:
+        msL_thres.append(tc_conplot.get_confpeaks(localpath,this_sat))
+        print 'Peaks for ns%s: %s' % (this_sat,msL_thres[i])
+        i += 1
     # Rerun temporal correlation with new L values.
     # Need to tweak/add new function to tc_dlmp
     
