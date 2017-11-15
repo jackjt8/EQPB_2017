@@ -35,21 +35,21 @@ class temporal_correlation():
         self.valt = 'var_alt\\'
         
     def runtc(self, intalt, alt2test, L_thres):
-        dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = dataprep(intalt)
+        dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(intalt)
         #%%
         msL_thres = []
         for i in range(self.satlist):
             msL_thres.append(L_thres)
-        mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, msL_shells, alt2test)
+        self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, alt2test)
         #%%
         #[conplotreturn] = conplot
         #dataprep(alt2test)
         #mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, [conplotreturn], alt2test)
     
     def dataprep(self, alt2test):
-        print 'Path on disk: %s' % (localpath)
-        print 'Satlist: %s' % (satlist)
-        print 'Start datetime: %s end datetime: %s' % (start_date, end_date)
+        print 'Path on disk: %s' % (self.localpath)
+        print 'Satlist: %s' % (self.satlist)
+        print 'Start datetime: %s end datetime: %s' % (self.start_date, self.end_date)
         print '###'
         
         for this_sat in self.satlist:
@@ -58,15 +58,15 @@ class temporal_correlation():
             #%%
             start_time = time.clock()
             # Load data.
-            ms = gps_particle_data.meta_search(this_sat,localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
-            ms.load_local_data(start_date,end_date)
+            ms = gps_particle_data.meta_search(this_sat, self.localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
+            ms.load_local_data(self.start_date, self.end_date)
             ms.clean_up() #deletes json files.
             print ''
         
             #%%
         
             #Get earthquakes for given conditions
-            eq_s = gps_particle_data.earthquake_search(start_date,end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
+            eq_s = gps_particle_data.earthquake_search(self.start_date, self.end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
             print ''
             #Calculate L-shells of the earthquakes
             L_shells = []
@@ -130,23 +130,17 @@ class temporal_correlation():
             """
             return dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells
         
-    def mthandler(self, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, alt2test):
-        pool = Pool(threads)
-        #L_thres is our iterable
-        temp = zip(repeat(localpath),repeat(n), repeat(dday), repeat(ls), repeat(indices), L_shells, repeat(eq_datetimes),repeat(satalt),repeat(bcoord),repeat(L_thres),alt2test)
-        pool.map(tc_fw, temp)
-        pool.close()
-        pool.join()
-        
+    def mthandler(self, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, alt2test): 
         for this_sat in self.satlist:
             for L_thres in msL_thres(self.satlist.index(this_sat)):
+                pool = Pool(self.threads)
                 temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-                pool.map(tc_fw, temp)
+                pool.map(self.tc_fw, temp)
                 pool.close()
                 pool.join()
                 
-    def tc_fw((localpath, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_thres, L_shells, alt)):
-        print 'Working on %s with dL=%s at %s' % (this_sat,L_thres,alt)
+    def tc_fw((localpath, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, lthres, L_shells, alt)):
+        print 'Working on %s with dL=%s at %s' % (this_sat,lthres,alt)
         start_time = time.clock()
         # setup the current file we are using
         # removes deciaml point for lthres
