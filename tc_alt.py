@@ -49,8 +49,10 @@ def tc_fw((localpath, n, dday, ls, indices, L_shells, eq_datetimes, satalt, bcoo
             int_diy = datet.timetuple().tm_yday
             rest = (float(str(eq_datetimes[j])[11:13])/24) + (float(str(eq_datetimes[j])[14:16])/(24*60))+(float(str(eq_datetimes[j])[17:19])/(24*3600))
             diy = int_diy + rest
-            del_T = dday[i]-diy
-            del_L = ls[i]-L_shells[j]
+            #del_T = dday[i]-diy
+            del_T = diy-dday[i]
+            #del_L = ls[i]-L_shells[j]
+            del_L = L_shells[j]-ls[i]
             if abs(del_L) < lthres and  abs(del_T) < 0.5: # lthres use to be 1.
                 dT = del_T*24
                 #append it to the file
