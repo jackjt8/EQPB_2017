@@ -34,6 +34,9 @@ class temporal_correlation():
         self.vdl = 'var_dL\\'
         self.valt = 'var_alt\\'
         
+        #Check if gps sat data exists. Download if missing.
+        gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
+        
     def runtc(self, intalt, alt2test, L_thres):
         dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(intalt)
         #%%
