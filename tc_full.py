@@ -41,7 +41,7 @@ class temporal_correlation():
         dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(intalt)
         #%%
         msL_thres = []
-        for i in range(self.satlist):
+        for i in self.satlist:
             msL_thres.append(L_thres)
         self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, alt2test)
         #%%
@@ -135,7 +135,7 @@ class temporal_correlation():
         
     def mthandler(self, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, alt2test): 
         for this_sat in self.satlist:
-            for L_thres in msL_thres(self.satlist.index(this_sat)):
+            for L_thres in msL_thres[self.satlist.index(this_sat)]:
                 pool = Pool(self.threads)
                 temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
                 pool.map(self.tc_fw, temp)
