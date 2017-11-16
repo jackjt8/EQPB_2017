@@ -2193,18 +2193,15 @@ class data_int():
         self.satlist = satlist
         self.localfolder = 'data\\'
         self.rawf = 'raw\\'
-        self.vdl = 'var_dL\\'
-        self.valt = 'var_alt\\'
+        self.prof = 'processed\\'
 
         
         #int folders
         self.createfolders(self.localpath + self.localfolder + self.rawf)
-        self.createfolders(self.localpath + self.localfolder + self.vdl)
-        self.createfolders(self.localpath + self.localfolder + self.valt)
+        self.createfolders(self.localpath + self.localfolder + self.prof)
         for this_sat in satlist:
             self.createfolders(self.localpath + self.localfolder + self.rawf + 'ns' + str(this_sat) + '\\')
-            self.createfolders(self.localpath + self.localfolder + self.vdl + 'ns' + str(this_sat) + '\\')
-            self.createfolders(self.localpath + self.localfolder + self.valt + 'ns' + str(this_sat) + '\\')
+            self.createfolders(self.localpath + self.localfolder + self.prof + 'ns' + str(this_sat) + '\\')
 
             
     def createfolders(self,path):

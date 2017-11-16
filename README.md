@@ -22,6 +22,8 @@ Built in/for Python 2.7.13
 
 - PeakUtils
 
+- pathos
+
 ## Main modules:
 
 - gps_particle_data
