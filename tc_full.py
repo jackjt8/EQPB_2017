@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from pathos.multiprocessing import ProcessingPool as Pool
 from itertools import repeat
 import shutil
+import peakutils
 
 class temporal_correlation():
     def __init__(self, start_date, end_date, satlist, localpath, maxsizeondisk, threads):
@@ -32,8 +33,7 @@ class temporal_correlation():
         
         self.localfolder = 'data\\'
         self.rawf = 'raw\\'
-        self.vdl = 'var_dL\\'
-        self.valt = 'var_alt\\'
+        self.prof = 'processed\\'
         
         #Check if gps sat data exists. Download if missing.
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
@@ -41,15 +41,19 @@ class temporal_correlation():
     def runtc(self, intalt, alt2test, L_thres):
         for this_sat in self.satlist:
             dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
-            #%%
             self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
         #%%
-        #for this_sat in self.satlist:
-        #   L_Thres = conplot
-        #   dataprep(alt2test)
-        #   mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_thres, alt2test)
+        tcp = temporal_correlation_plot(self.localpath, self.satlist)
+        new_L = tcp.get_confpeaks(intalt)
+        #%%
+        i = 0
+        for this_sat in self.satlist:
+            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
+            self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L[i], alt2test)
+            i += 1
     
     def dataprep(self, this_sat, alt2test):
+        print ''
         print 'Path on disk: %s' % (self.localpath)
         print 'Satlist: %s' % (self.satlist)
         print 'Start datetime: %s end datetime: %s' % (self.start_date, self.end_date)
@@ -140,39 +144,30 @@ class temporal_correlation():
             pool = Pool(self.threads)
             #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
             pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), L_thres, repeat(L_shells[0]), repeat(alt2test))
-            pool.close()
-            pool.join()
+            #pool.close()
+            #pool.join()
+            pool.clear()
         else:
-            for L_thres in msL_thres[self.satlist.index(this_sat)]:
-                print 'Case alt2test != 1'
-                pool = Pool(self.threads)
-                #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-                pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-                pool.close()
-                pool.join()
+            print 'Case alt2test != 1'
+            pool = Pool(self.threads)
+            #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
+            pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
+            #pool.close()
+            #pool.join()
+            pool.clear()
                 
     def tc_fw(self, localpath, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, lthres, L_shells, alt):
-        print 'Working on %s with dL=%s at %s km' % (this_sat,lthres,alt)
-        print dday.shape
-        print ls.shape
-        print satalt.shape
-        print bcoord.shape 
-        print len(indices)
-        print len(eq_datetimes)
-        #print len(lthres)
-        print L_shells.shape
-        #print len(alt)
-        # These all work fine...
+        print 'Working on %s with dL=%s at %s km | Total tests: %s' % (this_sat,lthres,alt,len(indices)*len(L_shells))
         start_time = time.clock()
         # setup the current file we are using
         # removes deciaml point for lthres
         # file...
-        slthres = ''.join(e for e in str(lthres) if e.isalnum())
-        current_file = slthres + 'alttemp_' + str(this_sat) + '_' + str(alt) + '.ascii'
+        slthres = str(lthres).replace('.','d')
+        salt = ''.join(e for e in str(alt) if e.isalnum())
+        current_file = 'tc_ns' + str(this_sat) + '_' + salt + '_' + slthres + '.ascii'
 
         his_data = [] #not sure this one is necessary?
         #trying to match EQ and PB based on two conditions: delta T < 0.5 days and delta L (in this case) < 1
-        print 'indices = %s ; L_shells = %s ; indices*L_shells = %s' % (len(indices),len(L_shells),len(indices)*len(L_shells))
         for i in indices:
             for j in range(len(L_shells)):
                 #datet was date
@@ -189,18 +184,84 @@ class temporal_correlation():
                     #append it to the file
                     #print 'append'
                     with open(localpath + current_file, 'a') as f:
+                        #print 'write'
                         # Save satalt[i] bcoord[i]
                         #np.savetxt(f, dT)
                         #https://stackoverflow.com/questions/16621351/how-to-use-python-numpy-savetxt-to-write-strings-and-float-number-to-an-ascii-fi
                         DAT = np.asarray([dT, satalt[i], bcoord[i]])
                         np.savetxt(f, DAT[None], delimiter=' ')
         if os.path.isfile(localpath + current_file) == True:
-            dst = localpath + 'data\\var_alt\\' + 'ns' + str(this_sat) + '\\'
+            dst = localpath + self.localfolder + self.prof + 'ns' + str(this_sat) + '\\'
             shutil.move(localpath + current_file, dst + current_file)
                         
         print 'Finished working on %s-%s. Time taken: %s' % (lthres,alt,(time.clock() - start_time))
                                     
                 
+class temporal_correlation_plot():
+    def __init__(self, localpath, satlist):
+        self.localpath = localpath
+        self.satlist = satlist
+    
+    
+    def get_confpeaks(self, alt):
+        new_L = []
+        for this_sat in self.satlist:
+            #print 'get_confpeaks'
+            localfolder = 'data\\'
+            rawf = 'raw\\'
+            prof = 'processed\\'
+            
+            path = self.localpath + localfolder + prof + 'ns' + str(this_sat) + '\\'
+            filelist,L_thres,altvals = self.get_FL_L_A(path)
+            
+            conflvl = []
+            tempL = []
+            
+            for i in range(len(filelist)):
+                if i == altvals.index(alt):
+                    conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+            #cb = np.array(smooth(conflvl,5))
+            print conflvl
+            cb = np.array(conflvl)
+            indices = peakutils.indexes(cb, thres=0.02/max(cb), min_dist=0.1)
+            for lthres in indices:
+                tempL.append(L_thres[lthres])
+            new_L.append(tempL)
+        return new_L
+    
+    
+    def get_FL_L_A(self, path):
+        extension = '.ascii'
+        dirlist = os.listdir(path)
+        
+        filelist = []
+        L_thres = []
+        altvals = []
+        
+        for item in dirlist:
+            if item.endswith(extension):
+                filelist.append(item)
+                L_thres.append(float(str(item[12:-6]).replace('d','.')))
+                altvals.append(int(item[8:-12]))
 
+        return filelist,L_thres,altvals
+    
+    
+    def get_conflvl(path, current_file, this_sat, lthres):
+        # setup the current file we are using
+        
+        print '=== %s' % (current_file)
+        
+        curdata = np.loadtxt(path + current_file)
+        #convert the data into histogram bins.
+        bins = np.arange(min(curdata[:,0]), max(curdata[:,0])+1)
+        hist, bin_edges = np.histogram(curdata[:,0],bins)
+        
+        # n{sig} = (Nmax - Nbg/{sig})     taken from S. Yu Aleksandrin et al.: High-energy charged particle bursts
+        Nmax = max(hist)
+        Nbg = np.median(hist)
+        sig = np.std(hist) 
+        nsig = (Nmax - Nbg)/sig
+        return nsig
                 
 #    
