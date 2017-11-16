@@ -39,121 +39,117 @@ class temporal_correlation():
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
         
     def runtc(self, intalt, alt2test, L_thres):
-        dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(intalt)
+        for this_sat in self.satlist:
+            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
+            #%%
+            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
         #%%
-        msL_thres = []
-        for i in self.satlist:
-            msL_thres.append(L_thres)
-        print msL_thres
-        self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, intalt)
-        #%%
-        #[conplotreturn] = conplot
-        #dataprep(alt2test)
-        #mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, [conplotreturn], alt2test)
+        #for this_sat in self.satlist:
+        #   L_Thres = conplot
+        #   dataprep(alt2test)
+        #   mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_thres, alt2test)
     
-    def dataprep(self, alt2test):
+    def dataprep(self, this_sat, alt2test):
         print 'Path on disk: %s' % (self.localpath)
         print 'Satlist: %s' % (self.satlist)
         print 'Start datetime: %s end datetime: %s' % (self.start_date, self.end_date)
         print '###'
         
-        for this_sat in self.satlist:
-            print ''
-            print 'Working on %s...' % (this_sat)
-            #%%
-            start_time = time.clock()
-            # Load data.
-            ms = gps_particle_data.meta_search(this_sat, self.localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
-            ms.load_local_data(self.start_date, self.end_date)
-            ms.clean_up() #deletes json files.
-            print ''
+        print ''
+        print 'Working on %s...' % (this_sat)
+        #%%
+        start_time = time.clock()
+        # Load data.
+        ms = gps_particle_data.meta_search(this_sat, self.localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
+        ms.load_local_data(self.start_date, self.end_date)
+        ms.clean_up() #deletes json files.
+        print ''
+    
+        #%%
+    
+        #Get earthquakes for given conditions
+        eq_s = gps_particle_data.earthquake_search(self.start_date, self.end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
+        print ''
+        #Calculate L-shells of the earthquakes
+        L_shells = []
+        for alt in alt2test:
+            L_shells.append(eq_s.get_L_shells(alt))
+        #EQ datetimes
+        eq_datetimes = eq_s.get_datetimes()
+    
+        #%%
+    
+        output_data = ms.get_all_data_by_satellite()
         
-            #%%
+        ddata = output_data[this_sat]['dropped_data']
+        index2drop = [i for i, j in enumerate(ddata) if j == 1]
         
-            #Get earthquakes for given conditions
-            eq_s = gps_particle_data.earthquake_search(self.start_date, self.end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
-            print ''
-            #Calculate L-shells of the earthquakes
-            L_shells = []
-            for alt in alt2test:
-                L_shells.append(eq_s.get_L_shells(alt))
-            #EQ datetimes
-            eq_datetimes = eq_s.get_datetimes()
+        #load data into temp array
+        temp_rem2 = np.asarray(output_data[this_sat]['rate_electron_measured'])[:,2]
+        ch2 = np.delete(temp_rem2,index2drop)
         
-            #%%
+        temp_dday =  output_data[this_sat]['decimal_day']
+        dday = np.delete(temp_dday,index2drop)
         
-            output_data = ms.get_all_data_by_satellite()
-            
-            ddata = output_data[this_sat]['dropped_data']
-            index2drop = [i for i, j in enumerate(ddata) if j == 1]
-            
-            #load data into temp array
-            temp_rem2 = np.asarray(output_data[this_sat]['rate_electron_measured'])[:,2]
-            ch2 = np.delete(temp_rem2,index2drop)
-            
-            temp_dday =  output_data[this_sat]['decimal_day']
-            dday = np.delete(temp_dday,index2drop)
-            
-            temp_ls = output_data[this_sat]['L_shell']
-            ls = np.delete(temp_ls,index2drop)
-            
-            temp_alt = output_data[this_sat]['Rad_Re']
-            satalt = np.delete(temp_alt,index2drop)
-            
-            temp_bcoord = output_data[this_sat]['b_coord_radius']
-            bcoord = np.delete(temp_bcoord,index2drop)
-            
-            #%%
-            
-            #get avg and stddev
-            avg = np.mean(ch2)
-            stddev = np.std(ch2)
-            #find difference between signal and average
-            sig_dif = np.subtract(ch2, avg)
-            #ratio in terms of std dev
-            ratio = np.divide(sig_dif, stddev)
+        temp_ls = output_data[this_sat]['L_shell']
+        ls = np.delete(temp_ls,index2drop)
         
-            indices = []
-            burst_indices = ratio>4
+        temp_alt = output_data[this_sat]['Rad_Re']
+        satalt = np.delete(temp_alt,index2drop)
         
-            #get indices of the signal points with sig_dif value > 4 sigma
-            for i in range(len(burst_indices)):
-                if burst_indices[i] == True:
-                    indices.append(i)
+        temp_bcoord = output_data[this_sat]['b_coord_radius']
+        bcoord = np.delete(temp_bcoord,index2drop)
         
-            #%%
+        #%%
         
-            #Need to clear ms and eq_s to save memory.
-            
-            #%%
-            
-            print 'Time to complete prep for %s: %s' % (this_sat, time.clock() - start_time)
-            print ''
-            
-            """ Sat - dday, ls, satalt, bcoord, indices
-                other  - eq_datetimes, L_shells
-            """
-            return dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells
+        #get avg and stddev
+        avg = np.mean(ch2)
+        stddev = np.std(ch2)
+        #find difference between signal and average
+        sig_dif = np.subtract(ch2, avg)
+        #ratio in terms of std dev
+        ratio = np.divide(sig_dif, stddev)
+    
+        indices = []
+        burst_indices = ratio>4
+    
+        #get indices of the signal points with sig_dif value > 4 sigma
+        for i in range(len(burst_indices)):
+            if burst_indices[i] == True:
+                indices.append(i)
+    
+        #%%
+    
+        #Need to clear ms and eq_s to save memory.
         
-    def mthandler(self, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, alt2test): 
-        for this_sat in self.satlist:
-            if len(alt2test) == 1:
-                #for L_thres in msL_thres[self.satlist.index(this_sat)]:
-                print 'Case alt2test = 1'
-                #print L_shells
+        #%%
+        
+        print 'Time to complete prep for %s: %s' % (this_sat, time.clock() - start_time)
+        print ''
+        
+        """ Sat - dday, ls, satalt, bcoord, indices
+            other  - eq_datetimes, L_shells
+        """
+        return dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells
+        
+    def mthandler(self, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, alt2test): 
+        if len(alt2test) == 1:
+            #for L_thres in msL_thres[self.satlist.index(this_sat)]:
+            print 'Case alt2test = 1'
+            #print L_shells
+            pool = Pool(self.threads)
+            #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
+            pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), L_thres, repeat(L_shells[0]), repeat(alt2test))
+            pool.close()
+            pool.join()
+        else:
+            for L_thres in msL_thres[self.satlist.index(this_sat)]:
+                print 'Case alt2test != 1'
                 pool = Pool(self.threads)
                 #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-                pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), msL_thres[0], repeat(L_shells[0]), repeat(alt2test))
+                pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
                 pool.close()
                 pool.join()
-            else:
-                for L_thres in msL_thres[self.satlist.index(this_sat)]:
-                    print 'Case alt2test != 1'
-                    pool = Pool(self.threads)
-                    #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-                    pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-                    pool.close()
-                    pool.join()
                 
     def tc_fw(self, localpath, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, lthres, L_shells, alt):
         print 'Working on %s with dL=%s at %s km' % (this_sat,lthres,alt)
