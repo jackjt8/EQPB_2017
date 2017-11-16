@@ -16,7 +16,8 @@ import matplotlib
 from matplotlib import gridspec
 import numpy as np
 import matplotlib.pyplot as plt
-from multiprocessing import Pool
+#from multiprocessing import Pool
+from pathos.multiprocessing import ProcessingPool as Pool
 from itertools import repeat
 import shutil
 
@@ -43,7 +44,8 @@ class temporal_correlation():
         msL_thres = []
         for i in self.satlist:
             msL_thres.append(L_thres)
-        self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, alt2test)
+        print msL_thres
+        self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, intalt)
         #%%
         #[conplotreturn] = conplot
         #dataprep(alt2test)
@@ -135,15 +137,36 @@ class temporal_correlation():
         
     def mthandler(self, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, msL_thres, alt2test): 
         for this_sat in self.satlist:
-            for L_thres in msL_thres[self.satlist.index(this_sat)]:
+            if len(alt2test) == 1:
+                #for L_thres in msL_thres[self.satlist.index(this_sat)]:
+                print 'Case alt2test = 1'
+                #print L_shells
                 pool = Pool(self.threads)
-                temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-                pool.map(self.tc_fw, temp)
+                #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
+                pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), msL_thres[0], repeat(L_shells[0]), repeat(alt2test))
                 pool.close()
                 pool.join()
+            else:
+                for L_thres in msL_thres[self.satlist.index(this_sat)]:
+                    print 'Case alt2test != 1'
+                    pool = Pool(self.threads)
+                    #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
+                    pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
+                    pool.close()
+                    pool.join()
                 
-    def tc_fw((localpath, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, lthres, L_shells, alt)):
-        print 'Working on %s with dL=%s at %s' % (this_sat,lthres,alt)
+    def tc_fw(self, localpath, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, lthres, L_shells, alt):
+        print 'Working on %s with dL=%s at %s km' % (this_sat,lthres,alt)
+        print dday.shape
+        print ls.shape
+        print satalt.shape
+        print bcoord.shape 
+        print len(indices)
+        print len(eq_datetimes)
+        #print len(lthres)
+        print L_shells.shape
+        #print len(alt)
+        # These all work fine...
         start_time = time.clock()
         # setup the current file we are using
         # removes deciaml point for lthres
