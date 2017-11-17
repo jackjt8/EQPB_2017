@@ -2203,6 +2203,7 @@ class data_int():
             self.createfolders(self.localpath + self.localfolder + self.rawf + 'ns' + str(this_sat) + '\\')
             self.createfolders(self.localpath + self.localfolder + self.prof + 'ns' + str(this_sat) + '\\')
 
+
             
     def createfolders(self,path):
         self.path = path
@@ -2220,8 +2221,7 @@ class gps_satellite_data_download:
         self.localpath = localpath
         self.localfolder = 'data\\'
         self.rawf = 'raw\\'
-        self.vdl = 'var_dL\\'
-        self.valt = 'var_alt\\'
+        self.prof = 'processed\\'
         self.maxsizeondisk = maxsizeondisk * 1024 * 1024 * 1024 # GB -> MB -> KB -> B
         self.totalsizeondisk = 0
     
