@@ -150,14 +150,15 @@ class temporal_correlation():
             pool.clear()
                 
     def tc_fw(self, localpath, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, lthres, L_shells, alt):
-        print 'Working on %s with dL=%s at %s km | Total tests: %s' % (this_sat,lthres,alt,len(indices)*len(L_shells))
+        ils = len(indices)*len(L_shells)
+        print 'Working on %s with dL=%s at %s km | Total tests: %s' % (this_sat,lthres,alt,ils)
         start_time = time.clock()
         # setup the current file we are using
         # removes deciaml point for lthres
         # file...
         slthres = str(lthres).replace('.','d')
         salt = ''.join(e for e in str(alt) if e.isalnum())
-        current_file = 'tc_ns' + str(this_sat) + '_' + salt + '_' + slthres + '.ascii'
+        current_file = 'tc_ns%s_%s_%s.ascii' % (this_sat,salt,slthres)
 
         his_data = [] #not sure this one is necessary?
         #trying to match EQ and PB based on two conditions: delta T < 0.5 days and delta L (in this case) < 1
@@ -186,8 +187,10 @@ class temporal_correlation():
         if os.path.isfile(localpath + current_file) == True:
             dst = localpath + self.localfolder + self.prof + 'ns' + str(this_sat) + '\\'
             shutil.move(localpath + current_file, dst + current_file)
-                        
-        print 'Finished working on %s-%s. Time taken: %s | ' % (lthres,alt,(time.clock() - start_time), ((len(indices)*len(L_shells)) / (time.clock() - start_time)))
+        
+        timetaken = time.clock() - start_time   
+        jobspersec = ils / timetaken           
+        print 'Finished working on %s-%s. Time taken: %s | %s Jobs per second' % (lthres,alt,timetaken, jobspersec)
                                     
                 
 class temporal_correlation_plot():
@@ -242,7 +245,7 @@ class temporal_correlation_plot():
         return filelist,L_thres,altvals
     
     
-    def get_conflvl(path, current_file, this_sat, lthres):
+    def get_conflvl(self, path, current_file, this_sat, lthres):
         # setup the current file we are using
         
         print '=== %s' % (current_file)
