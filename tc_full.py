@@ -42,15 +42,15 @@ class temporal_correlation():
         for this_sat in self.satlist:
             dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
             self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
-        #%%
-        tcp = temporal_correlation_plot(self.localpath, self.satlist)
-        new_L = tcp.get_confpeaks(intalt[0])
-        #%%
-        i = 0
-        for this_sat in self.satlist:
-            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
-            self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L[i], alt2test)
-            i += 1
+#        #%%
+#        tcp = temporal_correlation_plot(self.localpath, self.satlist)
+#        new_L = tcp.get_confpeaks(intalt[0])
+#        #%%
+#        i = 0
+#        for this_sat in self.satlist:
+#            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
+#            self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L[i], alt2test)
+#            i += 1
     
     def dataprep(self, this_sat, alt2test):
         print ''
@@ -234,8 +234,9 @@ class temporal_correlation_plot():
         for item in dirlist:
             if item.endswith(extension):
                 filelist.append(item)
-                L_thres.append(float(str(item[12:-6]).replace('d','.')))
-                altvals.append(int(item[8:-11]))
+                
+                L_thres.append(float(str(((item.split("_")[3]).split(".")[0])).replace('d','.')))
+                altvals.append(int(item.split("_")[2]))
         
         print altvals
         return filelist,L_thres,altvals
