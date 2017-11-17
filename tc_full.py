@@ -44,7 +44,7 @@ class temporal_correlation():
             self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
         #%%
         tcp = temporal_correlation_plot(self.localpath, self.satlist)
-        new_L = tcp.get_confpeaks(intalt)
+        new_L = tcp.get_confpeaks(intalt[0])
         #%%
         i = 0
         for this_sat in self.satlist:
@@ -85,24 +85,20 @@ class temporal_correlation():
     
         output_data = ms.get_all_data_by_satellite()
         
-        ddata = output_data[this_sat]['dropped_data']
-        index2drop = [i for i, j in enumerate(ddata) if j == 1]
+        # improved drop data
+        ddata = np.array([i for i, j in enumerate(output_data[this_sat]['dropped_data']) if j == 1])
+        temp_ch2 = np.asarray(output_data[this_sat]['rate_electron_measured'])[:,2]
+        dch2 = np.where(temp_ch2 > 50000)[0]
+        dalt = np.array([i for i, j in enumerate(output_data[this_sat]['Rad_Re']) if j <= 3.5 or j >= 4.75])
+    
+        index2drop = np.unique(np.concatenate((ddata,dch2,dalt)))
+        #print index2drop
         
-        #load data into temp array
-        temp_rem2 = np.asarray(output_data[this_sat]['rate_electron_measured'])[:,2]
-        ch2 = np.delete(temp_rem2,index2drop)
-        
-        temp_dday =  output_data[this_sat]['decimal_day']
-        dday = np.delete(temp_dday,index2drop)
-        
-        temp_ls = output_data[this_sat]['L_shell']
-        ls = np.delete(temp_ls,index2drop)
-        
-        temp_alt = output_data[this_sat]['Rad_Re']
-        satalt = np.delete(temp_alt,index2drop)
-        
-        temp_bcoord = output_data[this_sat]['b_coord_radius']
-        bcoord = np.delete(temp_bcoord,index2drop)
+        ch2 = np.delete(temp_ch2,index2drop)
+        dday = np.delete(output_data[this_sat]['decimal_day'],index2drop)
+        ls = np.delete(output_data[this_sat]['L_shell'],index2drop)
+        satalt = np.delete(output_data[this_sat]['Rad_Re'],index2drop)
+        bcoord = np.delete(output_data[this_sat]['b_coord_radius'],index2drop)
         
         #%%
         
@@ -138,12 +134,9 @@ class temporal_correlation():
         
     def mthandler(self, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, alt2test): 
         if len(alt2test) == 1:
-            #for L_thres in msL_thres[self.satlist.index(this_sat)]:
-            print 'Case alt2test = 1'
-            #print L_shells
             pool = Pool(self.threads)
             #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-            pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), L_thres, repeat(L_shells[0]), repeat(alt2test))
+            pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), L_thres, repeat(L_shells[0]), repeat(alt2test[0]))
             #pool.close()
             #pool.join()
             pool.clear()
@@ -194,7 +187,7 @@ class temporal_correlation():
             dst = localpath + self.localfolder + self.prof + 'ns' + str(this_sat) + '\\'
             shutil.move(localpath + current_file, dst + current_file)
                         
-        print 'Finished working on %s-%s. Time taken: %s' % (lthres,alt,(time.clock() - start_time))
+        print 'Finished working on %s-%s. Time taken: %s | ' % (lthres,alt,(time.clock() - start_time), ((len(indices)*len(L_shells)) / (time.clock() - start_time)))
                                     
                 
 class temporal_correlation_plot():
@@ -242,8 +235,9 @@ class temporal_correlation_plot():
             if item.endswith(extension):
                 filelist.append(item)
                 L_thres.append(float(str(item[12:-6]).replace('d','.')))
-                altvals.append(int(item[8:-12]))
-
+                altvals.append(int(item[8:-11]))
+        
+        print altvals
         return filelist,L_thres,altvals
     
     
