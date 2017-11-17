@@ -49,7 +49,7 @@ class temporal_correlation():
         i = 0
         for this_sat in self.satlist:
             dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
-            self.mthandler(dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L[i], alt2test)
+            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L[i], alt2test)
             i += 1
     
     def dataprep(self, this_sat, alt2test):
