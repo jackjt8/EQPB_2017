@@ -39,9 +39,9 @@ class temporal_correlation():
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
         
     def runtc(self, intalt, alt2test, L_thres):
-        for this_sat in self.satlist:
-            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
-            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
+#        for this_sat in self.satlist:
+#            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
+#            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
         #%%
         tcp = temporal_correlation_plot(self.localpath, self.satlist)
         new_L = tcp.get_confpeaks(intalt[0])
@@ -213,11 +213,12 @@ class temporal_correlation_plot():
             conflvl = []
             tempL = []
             
-            for i in range(len(filelist)):
-                if i == altvals.index(alt):
-                    conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+            intindex = [i for i, j in enumerate(altvals) if j == alt[0]]
+        
+            for i in intindex:
+                conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+            
             #cb = np.array(smooth(conflvl,5))
-            print conflvl
             cb = np.array(conflvl)
             indices = peakutils.indexes(cb, thres=0.02/max(cb), min_dist=0.1)
             for lthres in indices:
@@ -241,7 +242,7 @@ class temporal_correlation_plot():
                 L_thres.append(float(str(((item.split("_")[3]).split(".")[0])).replace('d','.')))
                 altvals.append(int(item.split("_")[2]))
         
-        print altvals
+        #print altvals
         return filelist,L_thres,altvals
     
     
@@ -262,4 +263,103 @@ class temporal_correlation_plot():
         nsig = (Nmax - Nbg)/sig
         return nsig
                 
-#    
+    
+    
+    def auto_plot(self,localpath,this_sat, intalt):
+        start_time = time.clock()
+        localfolder = 'data\\'
+        rawf = 'raw\\'
+        prof = 'processed\\'
+        path = localpath + localfolder + prof + 'ns' +str(this_sat)+'\\'
+        
+        conflvl = []
+        
+        filelist,L_thres,alt = self.get_FL_L_A(path)
+        
+        intindex = [i for i, j in enumerate(alt) if j == intalt[0]]
+        
+        for i in intindex:
+            self.plotdata(path,filelist[i],this_sat,L_thres[i])
+            conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+        #print conflvl
+        fig = plt.figure(figsize=(13, 13))
+        plt.plot(L_thres, conflvl)
+        #plt.plot(L_thres,smooth(conflvl,3))    
+        plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
+        plt.grid(True)
+        plttitle = 'Confidence level with differing {delta}L values for Satellite %s' % (this_sat)
+        plt.title(plttitle)
+        plt.xlabel('{delta}L')
+        plt.ylabel('Confidence level')
+        plt.savefig(path+str(intalt[0])+'_confplot.png')
+        fig.clear() #cleanup
+        plt.close(fig) #cleanup
+        #plt.show()
+        
+        print " "
+        print "--- %s seconds ---" % (time.clock() - start_time)
+    
+    
+    def plotdata(self, path, current_file, this_sat, lthres):
+        #plot the data so far
+        fig = plt.figure(figsize=(13, 13))
+        gs1 = gridspec.GridSpec(3, 1)
+        gs1.update(wspace=0.0, hspace=0.05)
+        
+        slthres = ''.join(e for e in str(lthres) if e.isalnum())
+        his = np.loadtxt(path + current_file)
+        # his[:,0] contains dt
+        # his[:,1] contains satalt
+        # his[:,2] contains bcoord
+        
+        
+        titletext = 'Temporal correlation of detected particle\nbursts (from ns%s) to earthquakes\nwith dL of %s' % (this_sat,lthres)
+        plt.suptitle(titletext, fontsize=20)
+        fig.canvas.draw()
+        
+        ax1 = plt.subplot(gs1[0])
+        #
+        xcoords = np.arange(min(his[:,0]), max(his[:,0])+1)
+        for xc in xcoords:
+            plt.axvline(x=xc, color='0.75')
+        plt.axvline(x=0, color='r')
+        #
+        plt.hist(his[:,0], bins = np.arange(min(his[:,0]), max(his[:,0])+1))
+        #plt.xlabel(u'dT / hours', fontsize  = 30)
+        plt.ylabel('Number of events', fontsize = 16)
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        
+        ax2 = plt.subplot(gs1[1],sharex=ax1)
+        #
+        xcoords = np.arange(min(his[:,0]), max(his[:,0])+1)
+        for xc in xcoords:
+            plt.axvline(x=xc, color='0.75')
+        plt.axvline(x=0, color='r')
+        #
+        plt.scatter(his[:,0], his[:,1])
+        plt.ylabel('Satellite Altitude\n(In Earth Radii)', fontsize = 16)
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        
+        ax3 = plt.subplot(gs1[2],sharex=ax1)
+        #
+        xcoords = np.arange(min(his[:,0]), max(his[:,0])+1)
+        for xc in xcoords:
+            plt.axvline(x=xc, color='0.75')
+        plt.axvline(x=0, color='r')
+        #
+        plt.scatter(his[:,0], his[:,2])
+        plt.ylabel('Satellite L shell', fontsize = 16)
+        plt.xlabel(u'dT / hours', fontsize  = 16)
+        
+        plt.savefig(path+slthres+'_histo.png')
+        #plt.show()
+        fig.clear() #cleanup
+        plt.close(fig) #cleanup
+    
+    
+    
+    
+    
+    
+#
+
