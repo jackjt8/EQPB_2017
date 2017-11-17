@@ -39,9 +39,9 @@ class temporal_correlation():
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
         
     def runtc(self, intalt, alt2test, L_thres):
-#        for this_sat in self.satlist:
-#            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
-#            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
+        for this_sat in self.satlist:
+            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
+            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
         #%%
         tcp = temporal_correlation_plot(self.localpath, self.satlist)
         new_L = tcp.get_confpeaks(intalt[0])
