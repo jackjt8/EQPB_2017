@@ -39,18 +39,22 @@ class temporal_correlation():
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
         
     def runtc(self, intalt, alt2test, L_thres):
+        i = 0
         for this_sat in self.satlist:
             dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
-            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt)
+            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt, i)
         #%%
         tcp = temporal_correlation_plot(self.localpath, self.satlist)
         new_L = tcp.get_confpeaks(intalt[0])
+        print ''
+        print new_L
+        print ''
         #%%
-        i = 0
+        #i = 0
         for this_sat in self.satlist:
             dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
-            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L[i], alt2test)
-            i += 1
+            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L, alt2test, i)
+#            i += 1
     
     def dataprep(self, this_sat, alt2test):
         print ''
@@ -132,7 +136,7 @@ class temporal_correlation():
         """
         return dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells
         
-    def mthandler(self, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, alt2test): 
+    def mthandler(self, this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, alt2test, i): 
         if len(alt2test) == 1:
             pool = Pool(self.threads)
             #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
@@ -144,7 +148,8 @@ class temporal_correlation():
             print 'Case alt2test != 1'
             pool = Pool(self.threads)
             #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
-            pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
+            for a in L_thres[i]:
+                pool.map(self.tc_fw, repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(a), L_shells, alt2test)
             #pool.close()
             #pool.join()
             pool.clear()
@@ -173,7 +178,7 @@ class temporal_correlation():
                 del_T = diy-dday[i]
                 #del_L = ls[i]-L_shells[j]
                 del_L = L_shells[j]-ls[i]
-                if abs(del_L) < lthres and  abs(del_T) < 0.5: # lthres use to be 1.
+                if abs(del_L) < lthres and  abs(del_T) < 2: # lthres use to be 1.
                     dT = del_T*24
                     #append it to the file
                     #print 'append'
@@ -213,13 +218,13 @@ class temporal_correlation_plot():
             conflvl = []
             tempL = []
             
-            intindex = [i for i, j in enumerate(altvals) if j == alt[0]]
+            intindex = [i for i, j in enumerate(altvals) if j == alt]
         
             for i in intindex:
                 conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
             
-            #cb = np.array(smooth(conflvl,5))
-            cb = np.array(conflvl)
+            cb = np.array(self.smooth(conflvl,9))
+            #cb = np.array(conflvl)
             indices = peakutils.indexes(cb, thres=0.02/max(cb), min_dist=0.1)
             for lthres in indices:
                 tempL.append(L_thres[lthres])
@@ -245,7 +250,11 @@ class temporal_correlation_plot():
         #print altvals
         return filelist,L_thres,altvals
     
-    
+    def smooth(self,y, box_pts):
+        box = np.ones(box_pts)/box_pts
+        y_smooth = np.convolve(y, box, mode='same')
+        return y_smooth
+        
     def get_conflvl(self, path, current_file, this_sat, lthres):
         # setup the current file we are using
         
@@ -279,12 +288,12 @@ class temporal_correlation_plot():
         intindex = [i for i, j in enumerate(alt) if j == intalt[0]]
         
         for i in intindex:
-            self.plotdata(path,filelist[i],this_sat,L_thres[i])
+            #self.plotdata(path,filelist[i],this_sat,L_thres[i])
             conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
         #print conflvl
-        fig = plt.figure(figsize=(13, 13))
+        fig = plt.figure(figsize=(13, 13)) 
         plt.plot(L_thres, conflvl)
-        #plt.plot(L_thres,smooth(conflvl,3))    
+        plt.plot(L_thres,self.smooth(conflvl,9))  
         plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
         plt.grid(True)
         plttitle = 'Confidence level with differing {delta}L values for Satellite %s' % (this_sat)
