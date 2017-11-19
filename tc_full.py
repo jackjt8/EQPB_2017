@@ -37,24 +37,73 @@ class temporal_correlation():
         
         #Check if gps sat data exists. Download if missing.
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
+    
+
+    """ [i * 100 for i in range(20)].remove(intalt) # 0 to 2000km excluding 400
+    
+        alt2test # user defined.
+        intalt = 400
+        L_thres # user defined.
+        karg = 1
+        new_L = None
         
-    def runtc(self, intalt, alt2test, L_thres):
+        ///
+        alt2test = alt2test
+    
+    
+        karg defines mode of runtc
+    
+        TC and alt are the most intensive operations to perform.
+        
+        mode 1 is the default mode.
+        
+        mode | TC | confpeak | alt | plot tc/alt | plot conf |||
+        0      x       x        x                      x     ||| confpeak isn't the most accurate thing in the world.
+        1      x       x                               x     ||| requires manual analysis of peaks. Combine with mode 3.
+        2              x        x                            ||| auto discover peaks and alt test them.
+        3                       x                            ||| provide new_L values to test.
+        4              x                  x            x     ||| plots all histograms and all conf plot; Also gives conf peaks.
+        5              x                               x     ||| plots conf; Also gives conf peaks.
+        6+                                                   ||| N/A
+    """    
+    def runtc(self, alt2test, L_thres, intalt = 400, new_L = None, karg = 1):
+        #check if new_L has a legit value
+        if karg == 3 and new_L == None:
+            raise Exception("In order to use mode 3 you need to define new_L")
+        
+        
         i = 0
-        for this_sat in self.satlist:
-            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
-            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt, i)
         #%%
-        tcp = temporal_correlation_plot(self.localpath, self.satlist)
-        new_L = tcp.get_confpeaks(intalt[0])
-        print ''
-        print new_L
-        print ''
+        #TC
+        if karg == 0 or karg == 1:
+            for this_sat in self.satlist:
+                dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
+                self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt, i)
+                
         #%%
+        #confpeak
+        if karg == 0 or karg == 1 or karg == 2 or karg == 4 or karg == 5:
+            tcp = temporal_correlation_plot(self.localpath, self.satlist)
+            new_L = tcp.get_confpeaks(intalt)
+            
+        #%%
+        #alt
         #i = 0
-        for this_sat in self.satlist:
-            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
-            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L, alt2test, i)
-#            i += 1
+        if karg == 3: 
+            new_L = [[0.007,0.025,0.03,0.064]]
+        if karg == 0 or karg == 2 or karg == 3:
+            for this_sat in self.satlist:
+                dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
+                self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L, alt2test, i)
+                i += 1
+                
+        #%%
+        #plot tc/alt
+        
+        #%%
+        #plot conf
+        
+        ###
     
     def dataprep(self, this_sat, alt2test):
         print ''
@@ -214,6 +263,9 @@ class temporal_correlation_plot():
             
             path = self.localpath + localfolder + prof + 'ns' + str(this_sat) + '\\'
             filelist,L_thres,altvals = self.get_FL_L_A(path)
+            print filelist
+            print L_thres
+            print altvals
             
             conflvl = []
             tempL = []
@@ -222,7 +274,7 @@ class temporal_correlation_plot():
         
             for i in intindex:
                 conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
-            
+            print conflvl
             cb = np.array(self.smooth(conflvl,9))
             #cb = np.array(conflvl)
             indices = peakutils.indexes(cb, thres=0.02/max(cb), min_dist=0.1)
@@ -285,7 +337,7 @@ class temporal_correlation_plot():
         
         filelist,L_thres,alt = self.get_FL_L_A(path)
         
-        intindex = [i for i, j in enumerate(alt) if j == intalt[0]]
+        intindex = [i for i, j in enumerate(alt) if j == intalt]
         
         for i in intindex:
             #self.plotdata(path,filelist[i],this_sat,L_thres[i])
@@ -300,7 +352,7 @@ class temporal_correlation_plot():
         plt.title(plttitle)
         plt.xlabel('{delta}L')
         plt.ylabel('Confidence level')
-        plt.savefig(path+str(intalt[0])+'_confplot.png')
+        plt.savefig(path+str(intalt)+'_confplot.png')
         fig.clear() #cleanup
         plt.close(fig) #cleanup
         #plt.show()
