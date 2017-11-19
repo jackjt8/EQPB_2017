@@ -66,7 +66,7 @@ class temporal_correlation():
         5              x                               x     ||| plots conf; Also gives conf peaks.
         6+                                                   ||| N/A
     """    
-    def runtc(self, alt2test, L_thres, intalt = 400, new_L = None, karg = 1):
+    def runtc(self, alt2test, L_thres, intalt = 400, new_L = None, karg = 1, vsmooth = 9):
         #check if new_L has a legit value
         if karg == 3 and new_L == None:
             raise Exception("In order to use mode 3 you need to define new_L")
@@ -98,7 +98,10 @@ class temporal_correlation():
                 i += 1
                 
         #%%
-        #plot tc/alt
+        #plot tc/alt/conf
+        if karg == 0 or karg == 1 or karg == 4 or karg == 5:
+            tcp = temporal_correlation_plot(self.localpath, self.satlist)
+            tcp.auto_plot(intalt, karg, vsmooth)
         
         #%%
         #plot conf
@@ -253,7 +256,7 @@ class temporal_correlation_plot():
         self.satlist = satlist
     
     
-    def get_confpeaks(self, alt):
+    def get_confpeaks(self, alt, vsmooth):
         new_L = []
         for this_sat in self.satlist:
             #print 'get_confpeaks'
@@ -275,7 +278,7 @@ class temporal_correlation_plot():
             for i in intindex:
                 conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
             print conflvl
-            cb = np.array(self.smooth(conflvl,9))
+            cb = np.array(self.smooth(conflvl,vsmooth))
             #cb = np.array(conflvl)
             indices = peakutils.indexes(cb, thres=0.02/max(cb), min_dist=0.1)
             for lthres in indices:
@@ -326,39 +329,78 @@ class temporal_correlation_plot():
                 
     
     
-    def auto_plot(self,localpath,this_sat, intalt):
-        start_time = time.clock()
-        localfolder = 'data\\'
-        rawf = 'raw\\'
-        prof = 'processed\\'
-        path = localpath + localfolder + prof + 'ns' +str(this_sat)+'\\'
-        
-        conflvl = []
-        
-        filelist,L_thres,alt = self.get_FL_L_A(path)
-        
-        intindex = [i for i, j in enumerate(alt) if j == intalt]
-        
-        for i in intindex:
-            #self.plotdata(path,filelist[i],this_sat,L_thres[i])
-            conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
-        #print conflvl
-        fig = plt.figure(figsize=(13, 13)) 
-        plt.plot(L_thres, conflvl)
-        plt.plot(L_thres,self.smooth(conflvl,9))  
-        plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
-        plt.grid(True)
-        plttitle = 'Confidence level with differing {delta}L values for Satellite %s' % (this_sat)
-        plt.title(plttitle)
-        plt.xlabel('{delta}L')
-        plt.ylabel('Confidence level')
-        plt.savefig(path+str(intalt)+'_confplot.png')
-        fig.clear() #cleanup
-        plt.close(fig) #cleanup
-        #plt.show()
-        
-        print " "
-        print "--- %s seconds ---" % (time.clock() - start_time)
+    def auto_plot(self,intalt,karg,vsmooth):
+        for this_sat in self.satlist:
+            localfolder = 'data\\'
+            rawf = 'raw\\'
+            prof = 'processed\\'
+            path = self.localpath + localfolder + prof + 'ns' +str(this_sat)+'\\'
+            
+            conflvl = []
+            
+            filelist,L_thres,alt = self.get_FL_L_A(path)
+            
+            #%%
+            # Plots histograms
+            if karg == 4:
+                for i in filelist:
+                    self.plotdata(path,filelist[i],this_sat,L_thres[i])
+            
+            #%%
+            # This plots conf - dL
+            
+            intindex = [i for i, j in enumerate(alt) if j == intalt]
+            
+            for i in intindex:
+                #self.plotdata(path,filelist[i],this_sat,L_thres[i])
+                conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+            #print conflvl
+            fig = plt.figure(figsize=(13, 13)) 
+            plt.plot(L_thres, conflvl)
+            plt.plot(L_thres,self.smooth(conflvl,9))  
+            plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
+            plt.grid(True)
+            plttitle = 'Confidence level with differing {delta}L values for Satellite %s at %skm' % (this_sat,alt)
+            plt.title(plttitle)
+            plt.xlabel('{delta}L')
+            plt.ylabel('Confidence level')
+            plt.savefig(path+str(alt)+'_confplot.png')
+            fig.clear() #cleanup
+            plt.close(fig) #cleanup
+            #plt.show()
+            
+            #%%
+            # Plot conf - alt
+            
+            ualt = list(set(alt)) # unique alts
+            index0 = [i for i, j in enumerate(alt) if j == ualt[0]] # gets us the indexes of tested dL's
+            Lstested = [alt[i] for i in index0] # get us the dL's tested
+            
+            confLstested = []
+            for L in Lstested:
+                temp = []
+                for i in alt:
+                    if L_thres[i] == L:
+                        temp.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+                confLstested.append(temp)
+            
+                
+                sL = str(L).replace('.','d')
+                #print conflvl
+                fig = plt.figure(figsize=(13, 13)) 
+                plt.plot(ualt, confLstested)
+                plt.plot(ualt,self.smooth(confLstested,vsmooth))  
+                plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
+                plt.grid(True)
+                plttitle = 'Confidence level with a {delta}L of %s for Satellite %s with different coupling altitudes' % (L,this_sat)
+                plt.title(plttitle)
+                plt.xlabel('Coupling altitude')
+                plt.ylabel('Confidence level')
+                plt.savefig(path+'L'+str(sL)+'_confplot.png')
+                fig.clear() #cleanup
+                plt.close(fig) #cleanup
+                #plt.show()
+                
     
     
     def plotdata(self, path, current_file, this_sat, lthres):
@@ -409,7 +451,7 @@ class temporal_correlation_plot():
         plt.axvline(x=0, color='r')
         #
         plt.scatter(his[:,0], his[:,2])
-        plt.ylabel('Satellite L shell', fontsize = 16)
+        plt.ylabel('Satellite b_coord_radius', fontsize = 16)
         plt.xlabel(u'dT / hours', fontsize  = 16)
         
         plt.savefig(path+slthres+'_histo.png')
