@@ -39,19 +39,7 @@ class temporal_correlation():
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
     
 
-    """ [i * 100 for i in range(20)].remove(intalt) # 0 to 2000km excluding 400
-    
-        alt2test # user defined.
-        intalt = 400
-        L_thres # user defined.
-        karg = 1
-        new_L = None
-        
-        ///
-        alt2test = alt2test
-    
-    
-        karg defines mode of runtc
+    """ karg defines mode of runtc
     
         TC and alt are the most intensive operations to perform.
         
@@ -67,6 +55,7 @@ class temporal_correlation():
         6+                                                   ||| N/A
     """    
     def runtc(self, alt2test, L_thres, intalt = 400, new_L = None, karg = 1, vsmooth = 9):
+        print karg
         #check if new_L has a legit value
         if karg == 3 and new_L == None:
             raise Exception("In order to use mode 3 you need to define new_L")
@@ -76,22 +65,26 @@ class temporal_correlation():
         #%%
         #TC
         if karg == 0 or karg == 1:
+            print 'TC'
             for this_sat in self.satlist:
-                dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,intalt)
-                self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, intalt, i)
+                dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,[intalt]) 
+                self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, [intalt], i)
                 
         #%%
         #confpeak
         if karg == 0 or karg == 1 or karg == 2 or karg == 4 or karg == 5:
+            print 'confpeak'
             tcp = temporal_correlation_plot(self.localpath, self.satlist)
-            new_L = tcp.get_confpeaks(intalt)
+            new_L = tcp.get_confpeaks(intalt,vsmooth)
             
         #%%
         #alt
         #i = 0
-        if karg == 3: 
+        if karg == 3:
+            print 'alt3'
             new_L = [[0.007,0.025,0.03,0.064]]
         if karg == 0 or karg == 2 or karg == 3:
+            'print alt'
             for this_sat in self.satlist:
                 dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
                 self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L, alt2test, i)
@@ -100,6 +93,7 @@ class temporal_correlation():
         #%%
         #plot tc/alt/conf
         if karg == 0 or karg == 1 or karg == 4 or karg == 5:
+            print 'plot tc/alt/conf'
             tcp = temporal_correlation_plot(self.localpath, self.satlist)
             tcp.auto_plot(intalt, karg, vsmooth)
         
@@ -197,7 +191,6 @@ class temporal_correlation():
             #pool.join()
             pool.clear()
         else:
-            print 'Case alt2test != 1'
             pool = Pool(self.threads)
             #temp = zip(repeat(self.localpath), repeat(this_sat), repeat(dday), repeat(ls), repeat(satalt),repeat(bcoord), repeat(indices), repeat(eq_datetimes), repeat(L_thres), L_shells, alt2test)
             for a in L_thres[i]:
@@ -316,8 +309,14 @@ class temporal_correlation_plot():
         print '=== %s' % (current_file)
         
         curdata = np.loadtxt(path + current_file)
+        print curdata
         #convert the data into histogram bins.
-        bins = np.arange(min(curdata[:,0]), max(curdata[:,0])+1)
+        #if curdata hold just 1 values, this throws error--- IndexError: too many indices for array
+        if curdata.ndim == 2:
+            bins = np.arange(min(curdata[:,0]), max(curdata[:,0])+1)
+        else:
+            print 'WARN %s only contains a single line. Increase dataset size.' % (current_file)
+            return 0
         hist, bin_edges = np.histogram(curdata[:,0],bins)
         
         # n{sig} = (Nmax - Nbg/{sig})     taken from S. Yu Aleksandrin et al.: High-energy charged particle bursts
