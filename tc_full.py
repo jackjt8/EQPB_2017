@@ -58,7 +58,6 @@ class temporal_correlation():
         Checked mode(s): 0,1,3,4,5
     """    
     def runtc(self, alt2test, L_thres, intalt = 400, new_L = None, karg = 1, vsmooth = 9):
-        print karg
         #check if new_L has a legit value
         if karg == 3 and new_L == None:
             raise Exception("In order to use mode 3 you need to define new_L")
@@ -84,7 +83,6 @@ class temporal_correlation():
         #alt
         #i = 0
         if karg == 3:
-            print 'alt3'
             #new_L = [[0.007]]
         if karg == 0 or karg == 2 or karg == 3:
             'print alt'
@@ -262,9 +260,6 @@ class temporal_correlation_plot():
             
             path = self.localpath + localfolder + prof + 'ns' + str(this_sat) + '\\'
             filelist,L_thres,altvals = self.get_FL_L_A(path)
-            print filelist
-            print L_thres
-            print altvals
             
             conflvl = []
             tempL = []
@@ -273,7 +268,6 @@ class temporal_correlation_plot():
         
             for i in intindex:
                 conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
-            print conflvl
             cb = np.array(self.smooth(conflvl,vsmooth))
             #cb = np.array(conflvl)
             indices = peakutils.indexes(cb, thres=0.02/max(cb), min_dist=0.1)
