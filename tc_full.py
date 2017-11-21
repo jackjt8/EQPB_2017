@@ -53,6 +53,9 @@ class temporal_correlation():
         4              x                  x        tc   alt  ||| plots all histograms and all conf plot; Also gives conf peaks.
         5              x                           tc   alt  ||| plots conf; Also gives conf peaks.
         6+                                                   ||| N/A
+        
+        
+        Checked mode(s): 0,1,3,4,5
     """    
     def runtc(self, alt2test, L_thres, intalt = 400, new_L = None, karg = 1, vsmooth = 9):
         print karg
@@ -82,7 +85,7 @@ class temporal_correlation():
         #i = 0
         if karg == 3:
             print 'alt3'
-            new_L = [[0.007,0.025,0.03,0.064]]
+            #new_L = [[0.007]]
         if karg == 0 or karg == 2 or karg == 3:
             'print alt'
             for this_sat in self.satlist:
@@ -335,14 +338,14 @@ class temporal_correlation_plot():
             prof = 'processed\\'
             path = self.localpath + localfolder + prof + 'ns' +str(this_sat)+'\\'
             
-            conflvl = []
+
             
             filelist,L_thres,alt = self.get_FL_L_A(path)
             
             #%%
             # Plots histograms
             if karg == 4:
-                for i in filelist:
+                for i in range(len(filelist)):
                     self.plotdata(path,filelist[i],this_sat,L_thres[i])
             
             #%%
@@ -350,57 +353,67 @@ class temporal_correlation_plot():
             
             if karg == 0 or karg == 1 or karg == 4 or karg == 5:
                 intindex = [i for i, j in enumerate(alt) if j == intalt]
-                
+                conflvl = []
+                x = []
                 for i in intindex:
                     #self.plotdata(path,filelist[i],this_sat,L_thres[i])
                     conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+                    x.append(L_thres[i])
                 #print conflvl
                 fig = plt.figure(figsize=(13, 13)) 
-                plt.plot(L_thres, conflvl)
-                plt.plot(L_thres,self.smooth(conflvl,9))  
+                plt.plot(x, conflvl)
+                plt.plot(x,self.smooth(conflvl,9))  
                 plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
                 plt.grid(True)
                 plttitle = 'Confidence level with differing {delta}L values for Satellite %s at %skm' % (this_sat,intalt)
                 plt.title(plttitle)
                 plt.xlabel('{delta}L')
                 plt.ylabel('Confidence level')
-                plt.savefig(path+str(intalt)+'_confplot.png')
+                plt.savefig(path+'L'+str(intalt)+'_confplot.png')
                 fig.clear() #cleanup
                 plt.close(fig) #cleanup
                 #plt.show()
             
             #%%
             # Plot conf - alt
-            
-            if karg == 0 or karg == 2 or karg == 3 or karg == 4 or karg == 5:
-                ualt = list(set(alt)) # unique alts
-                index0 = [i for i, j in enumerate(alt) if j == ualt[0]] # gets us the indexes of tested dL's
-                Lstested = [alt[i] for i in index0] # get us the dL's tested
+            ualt = list(set(alt))
+            if (karg == 0 or karg == 2 or karg == 3 or karg == 4 or karg == 5) and len(ualt) > 1:
+                print 'CONF-ALT'
+                 # unique alts
+                index0 = [i for i, j in enumerate(alt) if j == ualt[1]] # gets us the indexes of tested dL's
+                Lstested = [L_thres[i] for i in index0] # get us the dL's tested
                 
                 confLstested = []
+                Lindex = 0
                 for L in Lstested:
                     temp = []
-                    for i in L_thres:
+                    x=[]
+                    for i in range(len(filelist)):
                         if L_thres[i] == L:
                             temp.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+                            x.append(alt[i])
+                    #print temp
                     confLstested.append(temp)
                 
                     
                     sL = str(L).replace('.','d')
                     #print conflvl
                     fig = plt.figure(figsize=(13, 13)) 
-                    plt.plot(ualt, confLstested)
-                    plt.plot(ualt,self.smooth(confLstested,vsmooth))  
-                    plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
+                    plt.scatter(x, confLstested[Lindex])
+                    #plt.plot(x,self.smooth(confLstested[Lindex],vsmooth))  
+                    #plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
                     plt.grid(True)
                     plttitle = 'Confidence level with a {delta}L of %s for Satellite %s with different coupling altitudes' % (L,this_sat)
                     plt.title(plttitle)
                     plt.xlabel('Coupling altitude')
                     plt.ylabel('Confidence level')
-                    plt.savefig(path+'L'+str(sL)+'_confplot.png')
+                    plt.savefig(path+'A'+sL+'_confplot.png')
                     fig.clear() #cleanup
                     plt.close(fig) #cleanup
                     #plt.show()
+                    Lindex += 1
+            else:
+                print 'You need to run alt testing.'
                 
     
     
@@ -410,7 +423,7 @@ class temporal_correlation_plot():
         gs1 = gridspec.GridSpec(3, 1)
         gs1.update(wspace=0.0, hspace=0.05)
         
-        slthres = ''.join(e for e in str(lthres) if e.isalnum())
+        slthres = str(lthres).replace('.','d')
         his = np.loadtxt(path + current_file)
         # his[:,0] contains dt
         # his[:,1] contains satalt
