@@ -82,7 +82,7 @@ class temporal_correlation():
         #%%
         #alt
         #i = 0
-        if karg == 3:
+        #if karg == 3:
             #new_L = [[0.007]]
         if karg == 0 or karg == 2 or karg == 3:
             'print alt'
