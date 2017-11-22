@@ -52,7 +52,7 @@ class temporal_correlation():
         3                       x                       alt  ||| provide new_L values to test.
         4              x                  x        tc   alt  ||| plots all histograms and all conf plot; Also gives conf peaks.
         5              x                           tc   alt  ||| plots conf; Also gives conf peaks.
-        6+                                                   ||| N/A
+        6              x                                     ||| prints confpeak
         
         
         Checked mode(s): 0,1,3,4,5
@@ -74,11 +74,13 @@ class temporal_correlation():
                 
         #%%
         #confpeak
-        if karg == 0 or karg == 1 or karg == 2 or karg == 4 or karg == 5:
+        if karg == 0 or karg == 1 or karg == 2 or karg == 4 or karg == 5 or karg == 6:
             print 'confpeak'
             tcp = temporal_correlation_plot(self.localpath, self.satlist)
             new_L = tcp.get_confpeaks(intalt,vsmooth)
-            
+        
+        if karg == 6:
+            print new_L
         #%%
         #alt
         #i = 0
@@ -272,7 +274,7 @@ class temporal_correlation_plot():
             #cb = np.array(conflvl)
             indices = peakutils.indexes(cb, thres=0.02/max(cb), min_dist=0.1)
             for lthres in indices:
-                tempL.append(L_thres[lthres])
+                    tempL.append(L_thres[intindex[lthres]])
             new_L.append(tempL)
         return new_L
     
