@@ -95,7 +95,7 @@ class temporal_correlation():
                 
         #%%
         #plot tc/alt/conf
-        if karg == 0 or karg == 1 or karg == 4 or karg == 5:
+        if karg == 0 or karg == 1 or karg == 3 or karg == 4 or karg == 5:
             print 'plot tc/alt/conf'
             tcp = temporal_correlation_plot(self.localpath, self.satlist)
             tcp.auto_plot(intalt, karg, vsmooth)
