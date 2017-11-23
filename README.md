@@ -1,12 +1,12 @@
 # EQPB_2017
 
-Built in/for Python 2.7.13
+Built in/for Python 2.7.13 (64 bit) -- Anaconda
 
 ## Requirements:
 
 - upto 16GB of RAM (worse case)
 
-### Modules
+### Libraries
 
 - wget (included)
 
@@ -53,8 +53,27 @@ Do not set threads equal to the number of threads you have. Run a test with 1 th
 L_thres values should be greater than 0.000 and reach to around 0.300. Based upon the geometry, we expect that small dL's, sub 0.070, would be most interesting. I highly recommend if you use any range() function that you use an integer range, using a small float range can lead to floating-point arithmetic issues, and then dividing by say 1000 to get floats.
 
 
+## Installation for people who have never used Python...
 
+1) Get Python 2.7 (I recommend Anaconda www.anaconda.com/download/)
 
+    - Install Python/Anaconda to the root of you C:\ Drive. ie along side C:\Program Files\ C:\Windows\ C:\Users\
+
+    - If you end up with Anaconda 3.6 you can also get a 2.7 environment with minimal extra work. conda.io/docs/user-guide/tasks/manage-python.html
+
+2) Get required libraries. If you have Anaconda, simply Google "anaconda <library name>" and look for anaconda.org (Recommend the conda-forge varients).
+
+    - Once you find the page, you will be given the command to run, ie conda install -c conda-forge pathos
+    
+    - To install, open the Anaconda Prompt (py27) and run the command. The prompt should run you through the install.
+    
+3) Download the program and extract it to a drive with some room. Be sure to note the path to the scripts.
+
+4) Edit auto2.py with the parameters you want. You need to define the localpath using double slashes. localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'
+
+4) To run, using Commandline (CMD), you need the path to the \py27\python.exe and to the script you wish to run.
+
+    - ie C:\Anaconda35\envs\py27\python.exe D:\jackj\Documents\GitHub\EQPB_2017\auto2.py
 
 
 
