@@ -209,8 +209,17 @@ class temporal_correlation():
         # setup the current file we are using
         # removes deciaml point for lthres
         # file...
-        slthres = str(lthres).replace('.','d')
-        salt = ''.join(e for e in str(alt) if e.isalnum())
+        temp1 = str(lthres).replace('.','d')
+        if len(temp1) == 5:
+            slthres = temp1 + '0' #0d029 -> 0d0290
+        elif len(temp1) == 4:
+            slthres = temp1 + '00' #0d02 -> 0d0200
+        #slthres = str(lthres).replace('.','d')
+        temp2 = ''.join(e for e in str(alt) if e.isalnum())
+        if len(temp2) == 3:
+            salt = '0' + temp2
+        else:
+            salt = temp2
         current_file = 'tc_ns%s_%s_%s.ascii' % (this_sat,salt,slthres)
 
         his_data = [] #not sure this one is necessary?
@@ -365,10 +374,17 @@ class temporal_correlation_plot():
                 plt.title(plttitle)
                 plt.xlabel('{delta}L')
                 plt.ylabel('Confidence level')
-                plt.savefig(path+'L'+str(intalt)+'_confplot.png')
+                temp2 = ''.join(e for e in str(intalt) if e.isalnum())
+                if len(temp2) == 3:
+                    salt = '0' + temp2
+                else:
+                    salt = temp2
+                plt.savefig(path+'L'+salt+'_confplot.png')
                 fig.clear() #cleanup
                 plt.close(fig) #cleanup
                 #plt.show()
+                
+                
             
             #%%
             # Plot conf - alt
@@ -378,6 +394,9 @@ class temporal_correlation_plot():
                  # unique alts
                 index0 = [i for i, j in enumerate(alt) if j == ualt[1]] # gets us the indexes of tested dL's
                 Lstested = [L_thres[i] for i in index0] # get us the dL's tested
+                
+                for j in index0:
+                    print filelist[j]
                 
                 confLstested = []
                 Lindex = 0
@@ -390,9 +409,7 @@ class temporal_correlation_plot():
                             x.append(alt[i])
                     #print temp
                     confLstested.append(temp)
-                
-                    
-                    sL = str(L).replace('.','d')
+
                     #print conflvl
                     fig = plt.figure(figsize=(13, 13)) 
                     plt.scatter(x, confLstested[Lindex])
@@ -403,7 +420,12 @@ class temporal_correlation_plot():
                     plt.title(plttitle)
                     plt.xlabel('Coupling altitude')
                     plt.ylabel('Confidence level')
-                    plt.savefig(path+'A'+sL+'_confplot.png')
+                    temp1 = str(L).replace('.','d')
+                    if len(temp1) == 5:
+                        slthres = temp1 + '0' #0d029 -> 0d0290
+                    elif len(temp1) == 4:
+                        slthres = temp1 + '00' #0d02 -> 0d0200
+                    plt.savefig(path+'A'+slthres+'_confplot.png')
                     fig.clear() #cleanup
                     plt.close(fig) #cleanup
                     #plt.show()
@@ -419,7 +441,12 @@ class temporal_correlation_plot():
         gs1 = gridspec.GridSpec(3, 1)
         gs1.update(wspace=0.0, hspace=0.05)
         
-        slthres = str(lthres).replace('.','d')
+        #slthres = str(lthres).replace('.','d')
+        temp1 = str(L).replace('.','d')
+        if len(temp1) == 5:
+            slthres = temp1 + '0' #0d029 -> 0d0290
+        elif len(temp1) == 4:
+            slthres = temp1 + '00' #0d02 -> 0d0200
         his = np.loadtxt(path + current_file)
         # his[:,0] contains dt
         # his[:,1] contains satalt
