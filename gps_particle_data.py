@@ -14,10 +14,11 @@ import time
 import shutil
 
 # Folder structure for data.
-localfolder = 'data\\'
-rawf = 'raw\\'
-prof = 'processed\\'
-jsonf = 'json\\'
+# Need to remove from global, but leave as ref.
+localfolder = 'data'
+rawf = 'raw'
+prof = 'processed'
+#jsonf = 'json'
 
 def daterange(start_date, end_date):
     for n in range(int ((end_date - start_date).days)):
@@ -295,6 +296,9 @@ class gps_particle_datafile_local():
         # self.basepath = self.folder_path();
         self.data_filename = f;
         self.localpath = localpath;
+        self.localfolder = 'data'
+		self.rawf = 'raw'
+		self.prof = 'processed'
         self.data = self.localread();        
         
     # Returns the end time of the data file
@@ -391,8 +395,8 @@ class gps_particle_datafile_local():
 #    #print(done);
 
     def localread(self):
-        
-        text = open(self.localpath + localfolder + rawf + 'ns' + str(self.satellite_number) + '\\' + self.data_filename,"r").read();        
+        path = os.path.join(self.localpath, self.localfolder, self.rawf, 'ns' + str(self.satellite_number), self.data_filename)
+        text = open(path,"r").read();        
         self.raw_data = text.split('\n');
         
         # Creates a file header to store info about columns for one iteration
@@ -607,10 +611,13 @@ class gps_satellite_data_local():
         self.end_date = end_date;
         
         self.localpath = localpath;
+        self.localfolder = 'data'
+		self.rawf = 'raw'
+		self.prof = 'processed'
         #self.mydir = self.localpath + localfolder +  rawf
         
         self.satellite_number=satellite_number;
-        self.folder_path = self.localpath + localfolder + rawf + 'ns' + str(self.satellite_number) + '\\';
+        #self.folder_path = self.localpath + localfolder + rawf + 'ns' + str(self.satellite_number) + '\\';
         
         self.filenames = self.get_datafiles_in_date();
         
@@ -640,7 +647,8 @@ class gps_satellite_data_local():
 
     def get_datefile_list(self):
         filelist = []
-        for file in os.listdir(self.folder_path):
+        path = os.path.join(self.localpath, self.localfolder, self.rawf, 'ns' + str(self.satellite_number) )
+        for file in os.listdir(path):
             if file.endswith(".ascii"):
                 #print(os.path.join(self.folder_path, file))
                 filelist.append(file);
@@ -818,7 +826,7 @@ class event():
 
 # A basic class to search for earthquakes...
 # USGS only supports returning up to 20k EQs at a time.
-# between 2000 - 2017 there are 200k EQs.
+# between 2000 - 2017 there are 200k EQs which are >mag 4.0
 class earthquake_search:
 
     def __init__(self,startdate,enddate,min_magnitude=0,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180):
@@ -1519,7 +1527,7 @@ class satellite_map_plot:
 
 
 # This holds all of the data that searches over all satellites
-# takes (lower, upper, flag) flag 0-lower only; 1-range; 2-lower is list
+
 class meta_search:
     def __init__(self, satlist, localpath): # takes a list of the satellites we want
         #We only want a single satellite.
@@ -2191,17 +2199,17 @@ class data_int():
     def __init__(self, localpath, satlist):
         self.localpath = localpath
         self.satlist = satlist
-        self.localfolder = 'data\\'
-        self.rawf = 'raw\\'
-        self.prof = 'processed\\'
+        self.localfolder = 'data'
+        self.rawf = 'raw'
+        self.prof = 'processed'
 
         
         #int folders
-        self.createfolders(self.localpath + self.localfolder + self.rawf)
-        self.createfolders(self.localpath + self.localfolder + self.prof)
+        self.createfolders(os.path.join(self.localpath , self.localfolder , self.rawf))
+        self.createfolders(os.path.join(self.localpath , self.localfolder , self.prof))
         for this_sat in satlist:
-            self.createfolders(self.localpath + self.localfolder + self.rawf + 'ns' + str(this_sat) + '\\')
-            self.createfolders(self.localpath + self.localfolder + self.prof + 'ns' + str(this_sat) + '\\')
+            self.createfolders(os.path.join(self.localpath , self.localfolder , self.rawf , 'ns' + str(this_sat) ))
+            self.createfolders(os.path.join(self.localpath , self.localfolder , self.prof , 'ns' + str(this_sat) ))
 
 
             
@@ -2219,9 +2227,9 @@ class gps_satellite_data_download:
         self.end_date = end_date
         self.satlist = satlist
         self.localpath = localpath
-        self.localfolder = 'data\\'
-        self.rawf = 'raw\\'
-        self.prof = 'processed\\'
+        self.localfolder = 'data'
+        self.rawf = 'raw'
+        self.prof = 'processed'
         self.maxsizeondisk = maxsizeondisk * 1024 * 1024 * 1024 # GB -> MB -> KB -> B
         self.totalsizeondisk = 0
     
@@ -2276,7 +2284,7 @@ class gps_satellite_data_download:
             
         print; 
         print '====================================';
-        print 'Downloading/Checking data for satellite %s to/in %s' % (this_sat, '...\\' + self.localfolder + self.rawf + 'ns' + str(this_sat) + '\\')
+        print 'Downloading/Checking data for satellite %s to/in %s' % (this_sat, os.path.join( '...' , self.localfolder , self.rawf , 'ns' + str(this_sat) ))
     
         base = 'https://www.ngdc.noaa.gov/stp/space-weather/satellite-data/satellite-systems/gps/data/';
         folder_path = base + 'ns' + str(this_sat) + '/';
@@ -2332,26 +2340,26 @@ class gps_satellite_data_download:
     def download(self,filename, URL, this_sat):
         start_time = time.clock()
         src = self.localpath
-        dst = self.localpath + self.localfolder + self.rawf + 'ns' + str(this_sat) + '\\'
+        dst = os.path.join(self.localpath , self.localfolder , self.rawf , 'ns' + str(this_sat) )
         
         # check if we need to download
         if os.path.isfile(dst + filename) != True:
             print '%s is missing, downloading...' % (filename),
             wget.download(URL);
             # moves the file to \data\
-            shutil.move(src + filename, dst + filename)
+            shutil.move(os.path.join(src , filename), os.path.join(dst , filename))
         else:
             print '%s already exists... skipping' % (filename)
             # skips download, but we still want the filesize for later
-            fs = self.file_size(dst + filename)
+            fs = self.file_size(os.path.join(dst , filename))
             return fs;
     
         # Check if we've downloaded the 404 notice or actual data
-        fs = self.file_size(dst + filename);#This throws an error when wget hasn't finished 
+        fs = self.file_size(os.path.join(dst , filename));#This throws an error when wget hasn't finished 
         if(fs<10000):
             print ' |    Failed! Check internet connection or filename',
             print '... deleting file'
-            os.remove(dst + filename);
+            os.remove(os.path.join(dst , filename));
             return 0;
         else:
             print ' |    Success! runtime: %s' % (time.clock() - start_time)
