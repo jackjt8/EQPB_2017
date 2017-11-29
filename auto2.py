@@ -2,15 +2,18 @@ import tc_full
 from datetime import datetime,time
 import numpy as np
 from pathos.helpers import freeze_support 
-
-
+import os
+from inspect import getsourcefile
+from os.path import abspath
 
 def main():
     #start_date = datetime(2016,1,1,0,0,0);
     #end_date = datetime(2016,6,1,0,0,0);
     start_date = datetime(2015,12,20,0,0,0);
     end_date = datetime(2017,1,10,0,0,0);
-    localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'
+    #localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'
+    #localpath = os.path.dirname(os.path.realpath(__file__)) #has issues if ran from IDE/interp
+    localpath = abspath(getsourcefile(lambda:0))
     satlist = [70]
     
     #L_thres = np.arange(0.000,0.070,0.001) # 0.000 might return nothing, but we might have data there...
