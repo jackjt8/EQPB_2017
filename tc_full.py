@@ -428,7 +428,7 @@ class temporal_correlation_plot():
                         slthres = temp1 + '0' #0d029 -> 0d0290
                     elif len(temp1) == 4:
                         slthres = temp1 + '00' #0d02 -> 0d0200
-                    plt.savefig(os.path.join(path , 'A'+slthres+'_confplot.png')
+                    plt.savefig(os.path.join(path , 'A'+slthres+'_confplot.png'))
                     fig.clear() #cleanup
                     plt.close(fig) #cleanup
                     #plt.show()

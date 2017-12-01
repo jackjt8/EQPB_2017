@@ -297,8 +297,8 @@ class gps_particle_datafile_local():
         self.data_filename = f;
         self.localpath = localpath;
         self.localfolder = 'data'
-		self.rawf = 'raw'
-		self.prof = 'processed'
+	self.rawf = 'raw'
+	self.prof = 'processed'
         self.data = self.localread();        
         
     # Returns the end time of the data file
@@ -612,8 +612,8 @@ class gps_satellite_data_local():
         
         self.localpath = localpath;
         self.localfolder = 'data'
-		self.rawf = 'raw'
-		self.prof = 'processed'
+	self.rawf = 'raw'
+	self.prof = 'processed'
         #self.mydir = self.localpath + localfolder +  rawf
         
         self.satellite_number=satellite_number;
@@ -2234,7 +2234,8 @@ class gps_satellite_data_download:
         self.totalsizeondisk = 0
     
         print ''
-        print 'Checking existance of data files and folder structure in \%s' % (self.localfolder)
+	print self.localpath
+        print 'Checking existance of data files and folder structure in %s' % (self.localfolder)
         print 'Maximum size on disk: %s GB' % (float(self.maxsizeondisk) / 1024 / 1024 / 1024)
         print ''
     
@@ -2343,7 +2344,9 @@ class gps_satellite_data_download:
         dst = os.path.join(self.localpath , self.localfolder , self.rawf , 'ns' + str(this_sat) )
         
         # check if we need to download
-        if os.path.isfile(dst + filename) != True:
+	#print '##'
+	#print dst + filename
+        if os.path.isfile(os.path.join(dst,filename)) != True:
             print '%s is missing, downloading...' % (filename),
             wget.download(URL);
             # moves the file to \data\
