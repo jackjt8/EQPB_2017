@@ -31,9 +31,9 @@ class temporal_correlation():
         self.maxsizeondisk = maxsizeondisk
         self.threads = threads
         
-        self.localfolder = 'data\\'
-        self.rawf = 'raw\\'
-        self.prof = 'processed\\'
+        self.localfolder = 'data'
+        self.rawf = 'raw'
+        self.prof = 'processed'
         
         #Check if gps sat data exists. Download if missing.
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
@@ -247,8 +247,8 @@ class temporal_correlation():
                         DAT = np.asarray([dT, satalt[i], bcoord[i]])
                         np.savetxt(f, DAT[None], delimiter=' ')
         if os.path.isfile(localpath + current_file) == True:
-            dst = localpath + self.localfolder + self.prof + 'ns' + str(this_sat) + '\\'
-            shutil.move(localpath + current_file, dst + current_file)
+            dst = os.path.join(localpath , self.localfolder , self.prof , 'ns' + str(this_sat) )
+            shutil.move(os.path.join(localpath , current_file), os.path.join(dst , current_file) )
         
         timetaken = time.clock() - start_time   
         jobspersec = ils / timetaken           
@@ -259,17 +259,20 @@ class temporal_correlation_plot():
     def __init__(self, localpath, satlist):
         self.localpath = localpath
         self.satlist = satlist
+        self.localfolder = 'data'
+        self.rawf = 'raw'
+        self.prof = 'processed'
     
     
     def get_confpeaks(self, alt, vsmooth):
         new_L = []
         for this_sat in self.satlist:
             #print 'get_confpeaks'
-            localfolder = 'data\\'
-            rawf = 'raw\\'
-            prof = 'processed\\'
+            #localfolder = 'data'
+            #rawf = 'raw'
+            #prof = 'processed'
             
-            path = self.localpath + localfolder + prof + 'ns' + str(this_sat) + '\\'
+            path = os.path.join(self.localpath , self.localfolder , self.prof , 'ns' + str(this_sat) )
             filelist,L_thres,altvals = self.get_FL_L_A(path)
             
             conflvl = []
@@ -338,10 +341,10 @@ class temporal_correlation_plot():
     
     def auto_plot(self,intalt,karg,vsmooth):
         for this_sat in self.satlist:
-            localfolder = 'data\\'
-            rawf = 'raw\\'
-            prof = 'processed\\'
-            path = self.localpath + localfolder + prof + 'ns' +str(this_sat)+'\\'
+            #localfolder = 'data\\'
+            #rawf = 'raw\\'
+            #prof = 'processed\\'
+            path = os.path.join(self.localpath , self.localfolder , self.prof , 'ns' +str(this_sat) )
             
 
             
@@ -379,7 +382,7 @@ class temporal_correlation_plot():
                     salt = '0' + temp2
                 else:
                     salt = temp2
-                plt.savefig(path+'L'+salt+'_confplot.png')
+                plt.savefig(os.path.join(path , 'L'+salt+'_confplot.png'))
                 fig.clear() #cleanup
                 plt.close(fig) #cleanup
                 #plt.show()
@@ -425,7 +428,7 @@ class temporal_correlation_plot():
                         slthres = temp1 + '0' #0d029 -> 0d0290
                     elif len(temp1) == 4:
                         slthres = temp1 + '00' #0d02 -> 0d0200
-                    plt.savefig(path+'A'+slthres+'_confplot.png')
+                    plt.savefig(os.path.join(path , 'A'+slthres+'_confplot.png'))
                     fig.clear() #cleanup
                     plt.close(fig) #cleanup
                     #plt.show()
@@ -447,7 +450,7 @@ class temporal_correlation_plot():
             slthres = temp1 + '0' #0d029 -> 0d0290
         elif len(temp1) == 4:
             slthres = temp1 + '00' #0d02 -> 0d0200
-        his = np.loadtxt(path + current_file)
+        his = np.loadtxt(os.path.join(path , current_file))
         # his[:,0] contains dt
         # his[:,1] contains satalt
         # his[:,2] contains bcoord
@@ -491,7 +494,7 @@ class temporal_correlation_plot():
         plt.ylabel('Satellite b_coord_radius', fontsize = 16)
         plt.xlabel(u'dT / hours', fontsize  = 16)
         
-        plt.savefig(path+slthres+'_histo.png')
+        plt.savefig(os.path.join(path , slthres+'_histo.png'))
         #plt.show()
         fig.clear() #cleanup
         plt.close(fig) #cleanup
