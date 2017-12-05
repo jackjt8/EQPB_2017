@@ -829,8 +829,11 @@ class event():
 # between 2000 - 2017 there are 200k EQs which are >mag 4.0
 class earthquake_search:
 
-    def __init__(self,startdate,enddate,min_magnitude=0,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180):
-        start_time = time.clock()
+    def __init__(self):
+        pass
+    
+    def eq_search(self,startdate,enddate,min_magnitude=0,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180):
+          start_time = time.clock()
         print 'Finding earthquakes between %s and %s; mag>%s ; %s,%s - %s,%s' % (startdate,enddate,min_magnitude,min_lat,max_lat,min_lon,max_lon)
         # Check if start-end dates spans multiple years, create years inbetween
         daterange = []
@@ -854,7 +857,7 @@ class earthquake_search:
         # combine our lists.
         self.earthquake_information = np.c_[event_id, origin_time, evla, evlo, mag, mag_type, EventLocationName]
         print 'Found %s earthquakes in %s seconds' % (len(self.earthquake_information),(time.clock()-start_time))
-    
+        
     def save_info(self):
         ourfile = 'earthquake_information.npy'
         np.save(outfile, self.earthquake_information)
