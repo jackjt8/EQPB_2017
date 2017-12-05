@@ -854,6 +854,14 @@ class earthquake_search:
         # combine our lists.
         self.earthquake_information = np.c_[event_id, origin_time, evla, evlo, mag, mag_type, EventLocationName]
         print 'Found %s earthquakes in %s seconds' % (len(self.earthquake_information),(time.clock()-start_time))
+    
+    def save_info(self):
+        ourfile = 'earthquake_information.npy'
+        np.save(outfile, self.earthquake_information)
+    
+    def load_info(self):
+        ourfile = 'earthquake_information.npy'
+        self.earthquake_information = np.load(ourfile)
         
     def get_lat_lon(self):
         lats = (self.earthquake_information[:,2]);
