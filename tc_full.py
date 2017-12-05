@@ -133,6 +133,11 @@ def main():
     print ''
     
     
+    ### TC ###
+
+    for this_sat in self.satlist:
+        self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, [eq_s.get_L_shells(400)], L_thres, [intalt], i) # We need to pass mthandler a single L_shells list
+    
 
 class temporal_correlation():
     def __init__(self, start_date, end_date, satlist, localpath, maxsizeondisk, threads):
