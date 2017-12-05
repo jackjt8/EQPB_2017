@@ -21,6 +21,118 @@ from pathos.multiprocessing import ProcessingPool as Pool
 from itertools import repeat
 import shutil
 import peakutils
+from pathos.helpers import freeze_support 
+import os
+from inspect import getsourcefile
+from os.path import abspath
+
+def main():
+    #start_date = datetime(2016,1,1,0,0,0);
+    #end_date = datetime(2016,6,1,0,0,0);
+    start_date = datetime(2004,03,20,0,0,0);
+    end_date = datetime(2017,1,10,0,0,0);
+    #localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'
+    #localpath = os.path.dirname(os.path.realpath(__file__)) #has issues if ran from IDE/interp
+    localpath = abspath(getsourcefile(lambda:0))[:-8]
+    satlist = [53,59,60,61]
+    
+    #L_thres = np.arange(0.000,0.070,0.001) # 0.000 might return nothing, but we might have data there...
+    #L_thres = np.arange(1.0,70.0,1.0) / 1000 # floating point fun fix. Work with Int then divide down.
+    L_thres = np.linspace(0.0001,0.2,50)
+    #alt2test = [i * 100 for i in [0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]]
+    intalt = 400
+    alt2test = [i * 100 for i in range(20)]
+    alt2test.remove(intalt)
+    maxsizeondisk = 100 # given in GB.
+    threads = 6
+    
+    
+    ### Dataprep ###
+    
+    print ''
+    print 'Path on disk: %s' % (self.localpath)
+    print 'Satlist: %s' % (self.satlist)
+    print 'Start datetime: %s end datetime: %s' % (self.start_date, self.end_date)
+    print '###'
+        
+    print ''
+    print 'Working on %s...' % (this_sat)
+    
+    #%%
+    start_time = time.clock()
+    # Load data.
+    ms = gps_particle_data.meta_search(this_sat, self.localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
+    ms.load_local_data(self.start_date, self.end_date)
+    ms.clean_up() #deletes json files.
+    print ''
+    
+    #%%
+    #Get earthquakes for given conditions
+    eq_s = gps_particle_data.earthquake_search()
+    eq_s.eq_search(start_date, end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
+    #Save info to file
+    eq_s.saveinfo()
+
+    #Load EQ info
+    eq_s = gps_particle_data.earthquake_search()
+    eq_s.loadinfo()
+    print ''
+    #Calculate L-shells of the earthquakes
+    L_shells = []
+    for alt in alt2test:
+        L_shells.append(eq_s.get_L_shells(alt))
+
+    #EQ datetimes
+    eq_datetimes = eq_s.get_datetimes() 
+    
+    
+    output_data = ms.get_all_data_by_satellite()
+        
+    # improved drop data -- gets indices of data to drop. (numpy works with indices mainly)
+    ddata = np.array([i for i, j in enumerate(output_data[this_sat]['dropped_data']) if j == 1])
+    temp_ch2 = np.asarray(output_data[this_sat]['rate_electron_measured'])[:,2]
+    dch2 = np.where(temp_ch2 > 50000)[0]
+    dalt = np.array([i for i, j in enumerate(output_data[this_sat]['Rad_Re']) if j <= 3.5 or j >= 4.75])
+    
+    # combines to create new drop list
+    index2drop = np.unique(np.concatenate((ddata,dch2,dalt)))
+    #print index2drop
+    
+    # applies drop to data    
+    ch2 = np.delete(temp_ch2,index2drop)
+    dday = np.delete(output_data[this_sat]['decimal_day'],index2drop)
+    ls = np.delete(output_data[this_sat]['L_shell'],index2drop)
+    satalt = np.delete(output_data[this_sat]['Rad_Re'],index2drop)
+    bcoord = np.delete(output_data[this_sat]['b_coord_radius'],index2drop)
+        
+    #%%
+        
+    #get avg and stddev
+    avg = np.mean(ch2)
+    stddev = np.std(ch2)
+    #find difference between signal and average
+    sig_dif = np.subtract(ch2, avg)
+    #ratio in terms of std dev
+    ratio = np.divide(sig_dif, stddev)
+    
+    indices = []
+    burst_indices = ratio>4
+    
+    #get indices of the signal points with sig_dif value > 4 sigma
+    for i in range(len(burst_indices)):
+        if burst_indices[i] == True:
+            indices.append(i)
+    
+    #%%
+    
+    #Need to clear ms and eq_s to save memory.
+        
+    #%%
+        
+    print 'Time to complete prep for %s: %s' % (this_sat, time.clock() - start_time)
+    print ''
+    
+    
 
 class temporal_correlation():
     def __init__(self, start_date, end_date, satlist, localpath, maxsizeondisk, threads):
@@ -39,24 +151,6 @@ class temporal_correlation():
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
     
 
-    """ karg defines mode of runtc
-    
-        TC and alt are the most intensive operations to perform.
-        
-        mode 1 is the default mode.
-        
-        mode | TC | confpeak | alt | plot tc/alt | plot conf |||
-        0      x       x        x                  tc   alt  ||| confpeak isn't the most accurate thing in the world.
-        1      x       x                           tc        ||| requires manual analysis of peaks. Combine with mode 3.
-        2              x        x                       alt  ||| auto discover peaks and alt test them.
-        3                       x                       alt  ||| provide new_L values to test.
-        4              x                  x        tc   alt  ||| plots all histograms and all conf plot; Also gives conf peaks.
-        5              x                           tc   alt  ||| plots conf; Also gives conf peaks.
-        6              x                                     ||| prints confpeak
-        
-        
-        Checked mode(s): 0,1,3,4,5
-    """    
     def runtc(self, alt2test, L_thres, intalt = 400, new_L = None, karg = 1, vsmooth = 9):
         #check if new_L has a legit value
         if karg == 3 and new_L == None:
@@ -501,7 +595,10 @@ class temporal_correlation_plot():
     
     
     
-    
+  
+if __name__ == '__main__':
+    freeze_support()
+    main()
     
     
 #
