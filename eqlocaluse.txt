@@ -1,0 +1,17 @@
+#Get earthquakes for given conditions
+eq_s = gps_particle_data.earthquake_search()
+eq_s.eq_search(start_date, end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
+
+#Save info to file
+eq_s.saveinfo()
+
+#Load EQ info
+eq_s = gps_particle_data.earthquake_search()
+eq_s.loadinfo()
+
+print ''
+#Calculate L-shells of the earthquakes
+...
+
+#EQ datetimes
+eq_datetimes = eq_s.get_datetimes()
