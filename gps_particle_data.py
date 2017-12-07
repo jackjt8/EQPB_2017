@@ -833,7 +833,7 @@ class earthquake_search:
         pass
     
     def eq_search(self,startdate,enddate,min_magnitude=0,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180):
-          start_time = time.clock()
+        start_time = time.clock()
         print 'Finding earthquakes between %s and %s; mag>%s ; %s,%s - %s,%s' % (startdate,enddate,min_magnitude,min_lat,max_lat,min_lon,max_lon)
         # Check if start-end dates spans multiple years, create years inbetween
         daterange = []
