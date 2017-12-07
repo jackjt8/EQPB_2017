@@ -50,93 +50,137 @@ def main():
     ### Dataprep ###
     
     print ''
-    print 'Path on disk: %s' % (self.localpath)
-    print 'Satlist: %s' % (self.satlist)
-    print 'Start datetime: %s end datetime: %s' % (self.start_date, self.end_date)
+    print 'Path on disk: %s' % (localpath)
+    print 'Satlist: %s' % (satlist)
+    print 'Start datetime: %s end datetime: %s' % (start_date,end_date)
     print '###'
         
-    print ''
-    print 'Working on %s...' % (this_sat)
-    
-    #%%
-    start_time = time.clock()
-    # Load data.
-    ms = gps_particle_data.meta_search(this_sat, self.localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
-    ms.load_local_data(self.start_date, self.end_date)
-    ms.clean_up() #deletes json files.
-    print ''
-    
-    #%%
-    #Get earthquakes for given conditions
-    eq_s = gps_particle_data.earthquake_search()
-    eq_s.eq_search(start_date, end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
-    #Save info to file
-    eq_s.saveinfo()
+    for this_sat in satlist:
 
-    #Load EQ info
-    eq_s = gps_particle_data.earthquake_search()
-    eq_s.loadinfo()
-    print ''
-    #Calculate L-shells of the earthquakes
-    L_shells = []
-    for alt in alt2test:
-        L_shells.append(eq_s.get_L_shells(alt))
+        print ''
+        print 'Working on %s...' % (this_sat)
+    
+        #%%
+        start_time = time.clock()
+        # Load data.
+        ms = gps_particle_data.meta_search(this_sat,localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
+        ms.load_local_data(start_date,end_date)
+        ms.clean_up() #deletes json files.
+        print ''
+    
+        #%%
+        #Get earthquakes for given conditions
+        eq_s = gps_particle_data.earthquake_search()
+        eq_s.eq_search(start_date, end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
+        #Save info to file
+        eq_s.saveinfo()
 
-    #EQ datetimes
-    eq_datetimes = eq_s.get_datetimes() 
+        #Load EQ info
+        eq_s = gps_particle_data.earthquake_search()
+        eq_s.loadinfo()
+        print ''
+        #Calculate L-shells of the earthquakes
+        L_shells = []
+        for alt in alt2test:
+            L_shells.append(eq_s.get_L_shells(alt))
+
+        #EQ datetimes
+        eq_datetimes = eq_s.get_datetimes() 
     
     
-    output_data = ms.get_all_data_by_satellite()
+        output_data = ms.get_all_data_by_satellite()
         
-    # improved drop data -- gets indices of data to drop. (numpy works with indices mainly)
-    ddata = np.array([i for i, j in enumerate(output_data[this_sat]['dropped_data']) if j == 1])
-    temp_ch2 = np.asarray(output_data[this_sat]['rate_electron_measured'])[:,2]
-    dch2 = np.where(temp_ch2 > 50000)[0]
-    dalt = np.array([i for i, j in enumerate(output_data[this_sat]['Rad_Re']) if j <= 3.5 or j >= 4.75])
+        # improved drop data -- gets indices of data to drop. (numpy works with indices mainly)
+        ddata = np.array([i for i, j in enumerate(output_data[this_sat]['dropped_data']) if j == 1])
+        temp_ch2 = np.asarray(output_data[this_sat]['rate_electron_measured'])[:,2]
+        dch2 = np.where(temp_ch2 > 50000)[0]
+        dalt = np.array([i for i, j in enumerate(output_data[this_sat]['Rad_Re']) if j <= 3.5 or j >= 4.75])
     
-    # combines to create new drop list
-    index2drop = np.unique(np.concatenate((ddata,dch2,dalt)))
-    #print index2drop
+        # combines to create new drop list
+        index2drop = np.unique(np.concatenate((ddata,dch2,dalt)))
+        #print index2drop
     
-    # applies drop to data    
-    ch2 = np.delete(temp_ch2,index2drop)
-    dday = np.delete(output_data[this_sat]['decimal_day'],index2drop)
-    ls = np.delete(output_data[this_sat]['L_shell'],index2drop)
-    satalt = np.delete(output_data[this_sat]['Rad_Re'],index2drop)
-    bcoord = np.delete(output_data[this_sat]['b_coord_radius'],index2drop)
+        # applies drop to data    
+        ch2 = np.delete(temp_ch2,index2drop)
+        dday = np.delete(output_data[this_sat]['decimal_day'],index2drop)
+        ls = np.delete(output_data[this_sat]['L_shell'],index2drop)
+        satalt = np.delete(output_data[this_sat]['Rad_Re'],index2drop)
+        bcoord = np.delete(output_data[this_sat]['b_coord_radius'],index2drop)
         
-    #%%
+        #%%
         
-    #get avg and stddev
-    avg = np.mean(ch2)
-    stddev = np.std(ch2)
-    #find difference between signal and average
-    sig_dif = np.subtract(ch2, avg)
-    #ratio in terms of std dev
-    ratio = np.divide(sig_dif, stddev)
+        #get avg and stddev
+        avg = np.mean(ch2)
+        stddev = np.std(ch2)
+        #find difference between signal and average
+        sig_dif = np.subtract(ch2, avg)
+        #ratio in terms of std dev
+        ratio = np.divide(sig_dif, stddev)
     
-    indices = []
-    burst_indices = ratio>4
+        indices = []
+        burst_indices = ratio>4
     
-    #get indices of the signal points with sig_dif value > 4 sigma
-    for i in range(len(burst_indices)):
-        if burst_indices[i] == True:
-            indices.append(i)
+        #get indices of the signal points with sig_dif value > 4 sigma
+        for i in range(len(burst_indices)):
+            if burst_indices[i] == True:
+                indices.append(i)
     
-    #%%
+        #%%
     
-    #Need to clear ms and eq_s to save memory.
+        #Need to clear ms and eq_s to save memory.
         
-    #%%
+        #%%
         
-    print 'Time to complete prep for %s: %s' % (this_sat, time.clock() - start_time)
-    print ''
+        print 'Time to complete prep for %s: %s' % (this_sat, time.clock() - start_time)
+        print ''
     
-    
+
+
     ### TC ###
+	#!!! Run this after dataprep, within the this_sat loop.
 
+    	tc = temporal_correlation(start_date, end_date, satlist, localpath, maxsizeondisk, threads)
+        tc.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, [eq_s.get_L_shells(400)], L_thres, [intalt], i) # We need to pass mthandler a single L_shells list
+
+
+    ### plot dT ###
+
+    tcp = temporal_correlation_plot(localpath,satlist)
+    # dT histo, conf, confpeaks
+    for this_sat in satlist:
+        tcp.plot_dT(intalt,this_sat)
+
+    ### plot conf-dL (also conf-dL peaks) ###
+    
+    tcp = temporal_correlation_plot(localpath, satlist)
+    for this_sat in satlist:
+	tcp.plot_conf_dL(intalt,this_sat)
+	temp = tcp.get_confpeaks(intalt, vsmooth=8) #vsmooth is amount to smooth data by. (helps reduces peaks, but moves them.)
+	filename = "confpeaks_ns%s.txt" % (this_sat)
+        with open(filename,"w") as output:
+	    output.write(str(temp))
+
+    ### Var alt ###
+	#!!! Run this after dataprep, within the this_sat loop.
+	#!!! Recommended that you also run TC and plot_conf-dL first, and use the L values written to the file.
+
+    	tc = temporal_correlation(start_date, end_date, satlist, localpath, maxsizeondisk, threads)
+    	for this_sat in satlist:
+        	tc.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L, alt2test, i) # L_shells needs to be list with alt2test number of L_shell lists. new_L are obtained from conf-dL peaks.
+        	i += 1
+
+    ### plot dT (alt) ###
+    
+    tcp = temporal_correlation_plot(self.localpath, self.satlist)
+    for alt in alt2test:
+        for this_sat in self.satlist:
+            tcp.plot_dT(alt,this_sat)
+
+    ### plot conf-alt ###
+
+    tcp = temporal_correlation_plot(self.localpath, self.satlist)
     for this_sat in self.satlist:
-        self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, [eq_s.get_L_shells(400)], L_thres, [intalt], i) # We need to pass mthandler a single L_shells list
+	tcp.plot_conf_alt(this_sat)
     
 
 class temporal_correlation():
@@ -308,11 +352,12 @@ class temporal_correlation():
         # setup the current file we are using
         # removes deciaml point for lthres
         # file...
-        temp1 = str(lthres).replace('.','d')
-        if len(temp1) == 5:
-            slthres = temp1 + '0' #0d029 -> 0d0290
-        elif len(temp1) == 4:
-            slthres = temp1 + '00' #0d02 -> 0d0200
+        #temp1 = str(lthres).replace('.','d')
+	slthres = str(1000.0*lthres).zfill(5)
+        #len(temp1) == 5:
+        #    slthres = temp1 + '0' #0d029 -> 0d0290
+        #elif len(temp1) == 4:
+        #    slthres = temp1 + '00' #0d02 -> 0d0200
         #slthres = str(lthres).replace('.','d')
         temp2 = ''.join(e for e in str(alt) if e.isalnum())
         if len(temp2) == 3:
@@ -437,7 +482,86 @@ class temporal_correlation_plot():
         return nsig
                 
     
-    
+    def plot_dT(self,alt,this_sat):
+        path = os.path.join(self.localpath , self.localfolder , self.prof , 'ns' +str(this_sat) )
+        filelist,L_thres,alt = self.get_FL_L_A(path)
+        for i in range(len(filelist)):
+            self.plotdata(path,filelist[i],this_sat,L_thres[i])
+
+    def plot_conf_dL(self,alt,this_sat):
+        intindex = [i for i, j in enumerate(alt) if j == intalt]
+        conflvl = []
+        x = []
+        for i in intindex:
+            #self.plotdata(path,filelist[i],this_sat,L_thres[i])
+            conflvl.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+            x.append(L_thres[i])
+        #print conflvl
+        fig = plt.figure(figsize=(13, 13)) 
+        plt.plot(x, conflvl)
+        plt.plot(x,self.smooth(conflvl,9))  
+        plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
+        plt.grid(True)
+        plttitle = 'Confidence level with differing {delta}L values for Satellite %s at %skm' % (this_sat,intalt)
+        plt.title(plttitle)
+        plt.xlabel('{delta}L')
+        plt.ylabel('Confidence level')
+        temp2 = ''.join(e for e in str(intalt) if e.isalnum())
+        if len(temp2) == 3:
+            salt = '0' + temp2
+        else:
+            salt = temp2
+        plt.savefig(os.path.join(path , 'L'+salt+'_confplot.png'))
+        fig.clear() #cleanup
+        plt.close(fig) #cleanup
+
+    def plot_conf_alt(self,this_sat):
+        # Plot conf - alt
+        ualt = list(set(alt))
+        if len(ualt) >= 1:
+            print 'CONF-ALT'
+            # unique alts
+            index0 = [i for i, j in enumerate(alt) if j == ualt[1]] # gets us the indexes of tested dL's
+            Lstested = [L_thres[i] for i in index0] # get us the dL's tested
+                
+            for j in index0:
+                print filelist[j]
+                
+            confLstested = []
+            Lindex = 0
+            for L in Lstested:
+                temp = []
+                x=[]
+                for i in range(len(filelist)):
+                    if L_thres[i] == L:
+                        temp.append(self.get_conflvl(path,filelist[i],this_sat,L_thres[i]))
+                        x.append(alt[i])
+                #print temp
+                confLstested.append(temp)
+
+                #print conflvl
+                fig = plt.figure(figsize=(13, 13)) 
+                plt.scatter(x, confLstested[Lindex])
+                #plt.plot(x,self.smooth(confLstested[Lindex],vsmooth))  
+                #plt.xticks(np.arange(0.0, max(L_thres)+0.01, 0.01))
+                plt.grid(True)
+                plttitle = 'Confidence level with a {delta}L of %s for Satellite %s with different coupling altitudes' % (L,this_sat)
+                plt.title(plttitle)
+                plt.xlabel('Coupling altitude')
+                plt.ylabel('Confidence level')
+                #temp1 = str(L).replace('.','d')
+		slthres = str(1000.0*L).zfill(5)
+                #if len(temp1) == 5:
+                #    slthres = temp1 + '0' #0d029 -> 0d0290
+                #elif len(temp1) == 4:
+                #    slthres = temp1 + '00' #0d02 -> 0d0200
+                plt.savefig(os.path.join(path , 'A'+slthres+'_confplot.png'))
+                fig.clear() #cleanup
+                plt.close(fig) #cleanup
+                #plt.show()
+                Lindex += 1
+
+
     def auto_plot(self,intalt,karg,vsmooth):
         for this_sat in self.satlist:
             #localfolder = 'data\\'
