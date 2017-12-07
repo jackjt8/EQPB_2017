@@ -29,65 +29,82 @@ from os.path import abspath
 def main():
     #start_date = datetime(2016,1,1,0,0,0);
     #end_date = datetime(2016,6,1,0,0,0);
-    start_date = datetime(2004,03,20,0,0,0);
-    end_date = datetime(2017,1,10,0,0,0);
+    # Give dates +/- 7 days at least as a buffer.
+    start_date = datetime(2001,1,1,0,0,0);
+    end_date = datetime(2001,6,1,0,0,0); # 2017,1,10,0,0,0 (general end point for all sats)
     #localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'
     #localpath = os.path.dirname(os.path.realpath(__file__)) #has issues if ran from IDE/interp
-    localpath = abspath(getsourcefile(lambda:0))[:-8]
-    satlist = [53,59,60,61]
+    localpath = abspath(getsourcefile(lambda:0))[:-10] # gets path and removes file from it
+    satlist = [53]
     
-    #L_thres = np.arange(0.000,0.070,0.001) # 0.000 might return nothing, but we might have data there...
-    #L_thres = np.arange(1.0,70.0,1.0) / 1000 # floating point fun fix. Work with Int then divide down.
-    L_thres = np.linspace(0.0001,0.2,50)
+    L_thres = np.arange(1.0,70.0,1.0) / 1000 # 0.001-->0.07
+    #L_thres = np.linspace(0.0001,0.2,50)
     #alt2test = [i * 100 for i in [0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]]
     intalt = 400
-    alt2test = [i * 100 for i in range(20)]
+    alt2test = [i * 100 for i in range(1,20,1)]
     alt2test.remove(intalt)
     maxsizeondisk = 100 # given in GB.
     threads = 6
     
     
-    ### Dataprep ###
-    
     print ''
     print 'Path on disk: %s' % (localpath)
     print 'Satlist: %s' % (satlist)
+    #print 'Intalt: %s' % (intalt)
+    #print 'Altitudes to test: %s' % (alt2test)
+    #print 'dLs to test: %s' % (L_thres)
     print 'Start datetime: %s end datetime: %s' % (start_date,end_date)
+    print '=Threads to use: %s' % (threads)
     print '###'
-        
+    
+    
+    ### Download EQs ###
+    #Get earthquakes for given conditions
+    #print "Getting EQs..."
+    #eq_s = gps_particle_data.earthquake_search()
+    #eq_s.eq_search(start_date, end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
+    #Save info to file
+    #eq_s.save_info()
+    #sys.exit()
+
+
     for this_sat in satlist:
+
+	### Dataprep ###
 
         print ''
         print 'Working on %s...' % (this_sat)
+	print ''
     
         #%%
         start_time = time.clock()
         # Load data.
+	print "Waiting on meta search... (GPS data load)"
         ms = gps_particle_data.meta_search(this_sat,localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
         ms.load_local_data(start_date,end_date)
         ms.clean_up() #deletes json files.
-        print ''
-    
-        #%%
-        #Get earthquakes for given conditions
-        eq_s = gps_particle_data.earthquake_search()
-        eq_s.eq_search(start_date, end_date, min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
-        #Save info to file
-        eq_s.saveinfo()
+	print "Finished loading GPS data"
 
         #Load EQ info
+	print "Loading EQs..."
         eq_s = gps_particle_data.earthquake_search()
-        eq_s.loadinfo()
-        print ''
+        eq_s.load_info()
+	print "Finished loading EQs"
+
         #Calculate L-shells of the earthquakes
+	print "Calculating L-shells.."
         L_shells = []
         for alt in alt2test:
+	    #print alt
             L_shells.append(eq_s.get_L_shells(alt))
+	print "Calculated L-shells"
 
         #EQ datetimes
         eq_datetimes = eq_s.get_datetimes() 
+    	print "Finished working with EQs"
     
-    
+	print "Working on data to ignore..."
+	print 'bbb'
         output_data = ms.get_all_data_by_satellite()
         
         # improved drop data -- gets indices of data to drop. (numpy works with indices mainly)
@@ -109,6 +126,7 @@ def main():
         
         #%%
         
+	print "Finding particle burts..."
         #get avg and stddev
         avg = np.mean(ch2)
         stddev = np.std(ch2)
@@ -137,13 +155,13 @@ def main():
 
 
     ### TC ###
-	#!!! Run this after dataprep, within the this_sat loop.
+	#!!! Run this after dataprep
 
     	tc = temporal_correlation(start_date, end_date, satlist, localpath, maxsizeondisk, threads)
-        tc.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, [eq_s.get_L_shells(400)], L_thres, [intalt], i) # We need to pass mthandler a single L_shells list
+        tc.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, [eq_s.get_L_shells(intalt)], L_thres, [intalt], i) # We need to pass mthandler a single L_shells list
 
 
-    ### plot dT ###
+    ### plot dT histo ###
 
     tcp = temporal_correlation_plot(localpath,satlist)
     # dT histo, conf, confpeaks
@@ -161,26 +179,26 @@ def main():
 	    output.write(str(temp))
 
     ### Var alt ###
-	#!!! Run this after dataprep, within the this_sat loop.
-	#!!! Recommended that you also run TC and plot_conf-dL first, and use the L values written to the file.
+	#!!! Run this after dataprep
+	#!!! Recommended that you also run this after TC and conf-dL and use the L values written to the file: confpeaks_ns41.txt etc.
 
-    	tc = temporal_correlation(start_date, end_date, satlist, localpath, maxsizeondisk, threads)
-    	for this_sat in satlist:
-        	tc.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L, alt2test, i) # L_shells needs to be list with alt2test number of L_shell lists. new_L are obtained from conf-dL peaks.
-        	i += 1
+    	#tc = temporal_correlation(start_date, end_date, satlist, localpath, maxsizeondisk, threads)
+    	#for this_sat in satlist:
+        #	tc.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L, alt2test, i) # L_shells needs to be list with alt2test number of L_shell lists. new_L are obtained from conf-dL peaks.
+        #	i += 1
 
     ### plot dT (alt) ###
     
-    tcp = temporal_correlation_plot(self.localpath, self.satlist)
-    for alt in alt2test:
-        for this_sat in self.satlist:
-            tcp.plot_dT(alt,this_sat)
+    #tcp = temporal_correlation_plot(self.localpath, self.satlist)
+    #for alt in alt2test:
+    #    for this_sat in self.satlist:
+    #        tcp.plot_dT(alt,this_sat)
 
     ### plot conf-alt ###
 
-    tcp = temporal_correlation_plot(self.localpath, self.satlist)
-    for this_sat in self.satlist:
-	tcp.plot_conf_alt(this_sat)
+    #tcp = temporal_correlation_plot(self.localpath, self.satlist)
+    #for this_sat in self.satlist:
+    #    tcp.plot_conf_alt(this_sat)
     
 
 class temporal_correlation():
