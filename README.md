@@ -24,6 +24,17 @@ Built in/for Python 2.7.13 (64 bit) -- Anaconda
 
 - pathos
 
+### Libraries with Anaconda
+
+conda install -c anaconda basemap
+
+pip install aacgmv2
+
+conda install -c conda-forge pathos 
+
+conda install -c conda-forge peakutils 
+
+
 ## Main modules:
 
 - gps_particle_data

@@ -67,44 +67,44 @@ def main():
     #eq_s.save_info()
     #sys.exit()
 
-
+    #!!! MAIN LOOP
     for this_sat in satlist:
 
-	### Dataprep ###
+	 ### Dataprep ###
 
         print ''
         print 'Working on %s...' % (this_sat)
-	print ''
+        print ''
     
         #%%
         start_time = time.clock()
         # Load data.
-	print "Waiting on meta search... (GPS data load)"
+        print "Waiting on meta search... (GPS data load)"
         ms = gps_particle_data.meta_search(this_sat,localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
         ms.load_local_data(start_date,end_date)
         ms.clean_up() #deletes json files.
-	print "Finished loading GPS data"
+        print "Finished loading GPS data"
 
         #Load EQ info
-	print "Loading EQs..."
+        print "Loading EQs..."
         eq_s = gps_particle_data.earthquake_search()
         eq_s.load_info()
-	print "Finished loading EQs"
+        print "Finished loading EQs"
 
         #Calculate L-shells of the earthquakes
-	print "Calculating L-shells.."
+        print "Calculating L-shells.."
         L_shells = []
         for alt in alt2test:
-	    #print alt
+	     #print alt
             L_shells.append(eq_s.get_L_shells(alt))
-	print "Calculated L-shells"
+        print "Calculated L-shells"
 
         #EQ datetimes
         eq_datetimes = eq_s.get_datetimes() 
-    	print "Finished working with EQs"
+        print "Finished working with EQs"
     
-	print "Working on data to ignore..."
-	print 'bbb'
+        print "Working on data to ignore..."
+        print 'bbb'
         output_data = ms.get_all_data_by_satellite()
         
         # improved drop data -- gets indices of data to drop. (numpy works with indices mainly)
@@ -126,7 +126,7 @@ def main():
         
         #%%
         
-	print "Finding particle burts..."
+        print "Finding particle burts..."
         #get avg and stddev
         avg = np.mean(ch2)
         stddev = np.std(ch2)
@@ -155,9 +155,10 @@ def main():
 
 
     ### TC ###
-	#!!! Run this after dataprep
+	 #!!! Run this after dataprep
+    # within MAIN LOOP
 
-    	tc = temporal_correlation(start_date, end_date, satlist, localpath, maxsizeondisk, threads)
+        tc = temporal_correlation(start_date, end_date, satlist, localpath, maxsizeondisk, threads)
         tc.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, [eq_s.get_L_shells(intalt)], L_thres, [intalt], i) # We need to pass mthandler a single L_shells list
 
 
@@ -172,15 +173,15 @@ def main():
     
     tcp = temporal_correlation_plot(localpath, satlist)
     for this_sat in satlist:
-	tcp.plot_conf_dL(intalt,this_sat)
-	temp = tcp.get_confpeaks(intalt, vsmooth=8) #vsmooth is amount to smooth data by. (helps reduces peaks, but moves them.)
-	filename = "confpeaks_ns%s.txt" % (this_sat)
+        tcp.plot_conf_dL(intalt,this_sat)
+        temp = tcp.get_confpeaks(intalt, vsmooth=8) #vsmooth is amount to smooth data by. (helps reduces peaks, but moves them.)
+        filename = "confpeaks_ns%s.txt" % (this_sat)
         with open(filename,"w") as output:
-	    output.write(str(temp))
+	         output.write(str(temp))
 
     ### Var alt ###
-	#!!! Run this after dataprep
-	#!!! Recommended that you also run this after TC and conf-dL and use the L values written to the file: confpeaks_ns41.txt etc.
+    #!!! Run this after dataprep
+    #!!! Recommended that you also run this after TC and conf-dL and use the L values written to the file: confpeaks_ns41.txt etc.
 
     	#tc = temporal_correlation(start_date, end_date, satlist, localpath, maxsizeondisk, threads)
     	#for this_sat in satlist:
@@ -203,6 +204,8 @@ def main():
 
 class temporal_correlation():
     def __init__(self, start_date, end_date, satlist, localpath, maxsizeondisk, threads):
+        print ''
+        
         self.start_date = start_date
         self.end_date = end_date
         self.satlist = satlist
@@ -214,9 +217,46 @@ class temporal_correlation():
         self.rawf = 'raw'
         self.prof = 'processed'
         
+        #print "TC_init"
+        
         #Check if gps sat data exists. Download if missing.
         gps_particle_data.gps_satellite_data_download(self.start_date, self.end_date, self.satlist, self.localpath, self.maxsizeondisk)
     
+        #Downloads EQ database.
+        #!!! No autocheck-skip included here. Might want to fix that.
+        eq_s = gps_particle_data.earthquake_search()
+        #EQ database may as well cover the full time period.
+        eq_s.eq_search(datetime(2001,01,01,0,0,0), datetime(2017,01,10,0,0,0), min_magnitude=4,min_lat=-90,max_lat=90,min_lon=-180,max_lon=180)
+        eq_s.save_info()
+        
+        #sys.exit()
+    def finish(self):
+        sys.exit()
+
+    def main(self, alt2test, L_thres, intalt = 400, new_L = None, vsmooth = 9):
+        
+        i = 0
+        
+        ### TC ###
+        for this_sat in self.satlist:
+            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat,[intalt]) 
+            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, L_thres, [intalt], i)
+            
+        ### confpeak ###
+        tcp = temporal_correlation_plot(self.localpath, self.satlist)
+        new_L = tcp.get_confpeaks(intalt,vsmooth)
+        
+        ### alt testing ###
+        for this_sat in self.satlist:
+            dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells = self.dataprep(this_sat, alt2test)
+            self.mthandler(this_sat, dday, ls, satalt, bcoord, indices, eq_datetimes, L_shells, new_L, alt2test, i)
+            i += 1
+            
+        ### plot tc/alt/conf ###
+        tcp = temporal_correlation_plot(self.localpath, self.satlist)
+        #!!! Need to alter auto_plot karg
+        karg = 1
+        tcp.auto_plot(intalt, karg, vsmooth)
 
     def runtc(self, alt2test, L_thres, intalt = 400, new_L = None, karg = 1, vsmooth = 9):
         #check if new_L has a legit value
