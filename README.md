@@ -1,12 +1,16 @@
 # EQPB_2017
 
-Built in/for Python 2.7.13
+Built in/for Python 2.7.13 (64 bit) -- Anaconda
 
 ## Requirements:
 
-- upto 16GB of RAM (worse case)
+- 16GB (or more) RAM
 
-### Modules
+Loading all data for SVN41 (16 years 01-01-01 -> 17-01-10) uses 6GB (takes ~50 minutes); when extracting data from metasearch(ms), it is duplicated into output_data, when this occurs memory usage will double (12-14GB) until ms is removed from memory.
+
+
+
+### Libraries
 
 - wget (included)
 
@@ -24,6 +28,17 @@ Built in/for Python 2.7.13
 
 - pathos
 
+### Libraries with Anaconda
+
+conda install -c anaconda basemap
+
+pip install aacgmv2
+
+conda install -c conda-forge pathos 
+
+conda install -c conda-forge peakutils 
+
+
 ## Main modules:
 
 - gps_particle_data
@@ -36,44 +51,45 @@ Built in/for Python 2.7.13
 
     - Temporal correlation of particle bursts and EQs with varying dL and altitude
     
-    - Saves results to file(s).
-	
-	- Multithreaded
-
-- tc_conplot
-
-	- Plots TC histograms
-
-	- Plots peak confidence from the TC histogram peak against the dL value.
-
-	- Returns any peaks in the confidence plot as array.
+    - Saves results to file(s)
     
-	
-- tc_dlmp (replaced by tc_full)
-	
-	- Temporal correlation of particle bursts and EQs.
-	
-	- Saves results to file(s).
+    - Plots confidence level against dL OR against altitude
 	
 	- Multithreaded
 
-- tc_alt (replaced by tc_full)
 
-	- Tests a set of dL values at different altitudes.
-
-	- Saves results to file(s).
 
 ## Usage
 
 Please run 'auto2.py' from commandline to make use of this application.
 
-Do not set threads equal to the number of threads you have. Run a test with 1 thread to see what percentage a single thread is, and work from there. Setting threads too high can lead to increased processing time and your system freezing (it should recover). Also recommended that L_thres and alt2test are integer multiple of threads so you do not waste processing time as generally speaking, each element of L_thres should take the same amount of time to process.
+Do not set threads equal to the number of threads you have. Run a test with 1 thread to see what percentage a single thread is, and work from there. Setting threads too high can lead to increased processing time and your system freezing (it should recover). Also recommended that L_thres and alt2test are integer multiple of threads so you do not waste processing time as generally speaking, each element of L_thres/alt2test should take the same amount of time to process.
 
-L_thres values should be greater than 0.00 and I recommend a limit of 0.30 (Higher values should lead to more noise and reduced confidence). Further recommendation is to test all 0.01 step values from 0.01 to 0.30(or 0.20). Using numpy this can be achieved with: numpy.arange(0.01,0.21,0.01) where the maximum value, 0.20 in this case, needs to be one higher increment, 0.21, in order to be tested. NB- Based upon initial findings and the orbit of GPS satellites, it would be prudent to test much more around 0.01, trailing off to 0.07.
-
-While this is something that will be included in later builds, you can estimate the runtime of your data set. This can be achieved with a short benchmark of tc_dlmp.main(..) with a single satellite for a year and for a small set of L_thres. The console should print out the result of indices.L_shells, by dividing this result by the average time it takes to complete we have the 'number of calculations per second' (ncps). When you run your full dataset, you can then multiply your ncps by the outputted indices.L_shells value, for an estimate of the run time. (At least for that set of L_thres values)  
+L_thres values should be greater than 0.000 and reach to around 0.300. Based upon the geometry, we expect that small dL's, sub 0.070, would be most interesting. I highly recommend if you use any range() function that you use an integer range, using a small float range can lead to floating-point arithmetic issues, and then dividing by say 1000 to get floats.
 
 
+## Installation for people who have never used Python...
+
+1) Get **Python 2.7** (I recommend [Anaconda](www.anaconda.com/download/))
+
+    - Install Python/Anaconda to the root of you `C:\` Drive. ie along side `C:\Program Files\ C:\Windows\ C:\Users\`
+
+    - If you end up with Anaconda **3.6** you can also get a **2.7** environment with minimal extra work. [See here](conda.io/docs/user-guide/tasks/manage-python.html)
+
+2) Get required libraries. If you have Anaconda, simply Google "anaconda <library name>" and look for anaconda.org (Recommend the conda-forge varients).
+
+    - Once you find the page, you will be given the command to run, ie **conda install -c conda-forge pathos**
+    
+    - To install, open the **Anaconda Prompt (py27)** and run the command. The prompt should run you through the install.
+    
+3) Download the program and extract it to a drive with some room. Be sure to note the path to the scripts.
+
+4) Edit **auto2.py** with the parameters you want. You need to define the localpath using double slashes. `localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'`
+
+
+4) To run, using Commandline (CMD), you need the path to the **\py27\python.exe** and to the script you wish to run.
+
+    - ie `C:\Anaconda35\envs\py27\python.exe D:\jackj\Documents\GitHub\EQPB_2017\auto2.py`
 
 
 
