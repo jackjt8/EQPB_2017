@@ -2,6 +2,7 @@
 import gps_particle_data
 import numpy as np
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpld
 import matplotlib.gridspec as gridspec
@@ -18,8 +19,8 @@ end_date = datetime(2017,1,10,0,0,0);
 #localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'
 localpath = abspath(getsourcefile(lambda:0))[:-11]
 satlist = []
-satlist.extend([41,48])
-satlist.extend([53,54,55,56,57,58,59])
+#satlist.extend([41,48])
+#satlist.extend([53,54,55,56,57,58,59])
 satlist.extend([60,61,62,63,64,65,66,67,68,69])
 satlist.extend([70,71,72,73])
 #satlist = [41]
@@ -47,11 +48,21 @@ def add_years(d, years):
     except ValueError:
         return d + (date(d.year + years, 1, 1) - date(d.year, 1, 1))
 
+truestart = datetime(2000,12,31,0,0,0) # 2001,1,7,0,0,0
+cdstart = truestart
+while True:
+    cdstart += relativedelta(days=7)
+    if cdstart >= start_date:
+        break
 
-cdstart = start_date
-cdend = start_date + timedelta(days=7)
+#cdstart = start_date
+cdend = end_date #cdstart + relativedelta(days=6)
 
-while True:   
+
+
+while True:
+    print 'cdstart - %s' % (cdstart)
+    print 'cdend - %s' % (cdend)
     for this_sat in satlist:
         # Load data.
         ms = gps_particle_data.meta_search(this_sat,localpath) # Do not pass meta_search satlist. Single sat ~12GB of RAM.
@@ -204,8 +215,8 @@ while True:
             pos3.set_points(points3)
             ax3.set_position(pos3)
             
-            
-            #ax1.set_xlim(mpld.date2num([start_date,end_date]))
+            #!!!
+            #ax1.set_xlim(mpld.date2num([cdstart,cdend]))
             
             #%%
             
@@ -379,13 +390,40 @@ while True:
             plt.clf() #cleanup
             plt.cla() #cleanup
             plt.close(fig) #cleanup
+            
+            del angle
+            del bheight
+            del curlabel
+            del dday
+            del ecr
+            del i
+            del j
+            del ourdates
+            del ourmpldates
+            del pcr
+            del points1
+            del points2
+            del points3
+            del points4
+            del points5
+            del points6
+            del points7
+            del points8
+            del points9
+            del stemp
+            del titletext
+            del year
+            del fig
+            
             gc.collect()
         
         else:
             print 'Skipping %s as it has no data for this timeframe' % (this_sat)
             
-    cdstart = add_years(cdstart,1)
-    cdend = add_years(cdend,1)
+    #cdstart = add_years(cdstart,1)
+    #cdend = add_years(cdend,1)
+    cdstart += relativedelta(weeks=+52)
+    cdend = cdstart + relativedelta(days=+6)
 
     if cdend.year >= end_date.year and cdend.month >= end_date.month:
         gc.collect()
