@@ -8,19 +8,26 @@ import matplotlib.dates as mpld
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import AutoMinorLocator
 
+#signal comparison
+from scipy import signal
+from scipy.stats.stats import pearsonr
+import scipy.fftpack
+
 from inspect import getsourcefile
 from os.path import abspath
 
 #in order to address memory issues...
 import gc
  
-start_date = datetime(2001,1,1,0,0,0);
-end_date = datetime(2017,1,10,0,0,0);
+#start_date = datetime(2001,1,7,0,0,0);
+#end_date = datetime(2001,1,13,0,0,0);
+start_date = datetime(2015,1,7,0,0,0);
+end_date = datetime(2015,1,13,0,0,0);
 #localpath = 'D:\\jackj\\Documents\\GitHub\\EQPB_2017\\'
 localpath = abspath(getsourcefile(lambda:0))[:-11]
 satlist = []
-#satlist.extend([41,48])
-#satlist.extend([53,54,55,56,57,58,59])
+satlist.extend([41,48])
+satlist.extend([53,54,55,56,57,58,59])
 satlist.extend([60,61,62,63,64,65,66,67,68,69])
 satlist.extend([70,71,72,73])
 #satlist = [41]
@@ -124,8 +131,10 @@ while True:
             angle = np.degrees(np.arcsin((bheight/satalt)))
             
             #%%
-            fig = plt.figure(figsize=(40, 30), dpi=320)
-            gs1 = gridspec.GridSpec(7, 6)
+            #!!!
+            fig = plt.figure(figsize=(40, 30), dpi=160)
+            #fig = plt.figure(figsize=(4, 3), dpi=80)
+            gs1 = gridspec.GridSpec(11, 6) #7,6
             gs1.update(wspace=0.15, hspace=0.15)
             plt.tight_layout()
             
@@ -301,6 +310,35 @@ while True:
             ax5.set_position(pos5)
             
             #%%
+            
+            ax10 = plt.subplot(gs1[6,:-3])
+            
+            plt.scatter(satalt,bheight)   
+            plt.ylabel('Height above plane in Re', fontsize = 16)
+            plt.xlabel('Altitude in Earth Radii', fontsize  = 16)
+            # Setup grids
+            plt.minorticks_on()
+            minorLocator = AutoMinorLocator(5)
+            ax10.xaxis.set_minor_locator(minorLocator)
+            plt.grid(True, which='both')
+            ax10.yaxis.grid(False, which='minor') 
+            
+            # Shrink current axis by 20%
+            box = ax10.get_position()
+            ax10.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+            # Put a legend to the right of the current axis
+            ax10.legend(loc='center left', bbox_to_anchor=(1, 0.5), shadow=True)
+            
+            # change axis location of ax10
+            pos5 = ax5.get_position()
+            pos10 = ax10.get_position()
+            points5 = pos5.get_points()
+            points10 = pos10.get_points()
+            points10[1][1]=points5[0][1]
+            pos10.set_points(points10)
+            ax10.set_position(pos10)
+            
+            #%%
             ax6 = plt.subplot(gs1[4,3:])
             
             for i in range(int(ecr.shape[1])):
@@ -384,36 +422,127 @@ while True:
             ax8.set_position(pos8)
             
             #%%
+            """ grad plot
+            """
+            
+            ax30 = plt.subplot(gs1[7,:]) #not sharable with ax1 etc. as not date info
+            plt.plot(ecr[:,0]/np.gradient(satalt))
+            #plt.ylabel('Amplitude?', fontsize = 16)
+            #plt.xlabel('Frequency', fontsize  = 16)
+            
+            plt.minorticks_on()
+            minorLocator = AutoMinorLocator(4)
+            ax30.xaxis.set_minor_locator(minorLocator)
+            plt.grid(True, which='both')
+            #ax30.yaxis.grid(False, which='minor')
+            
+            # Shrink current axis by 20%
+            box = ax30.get_position()
+            ax30.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+            # Put a legend to the right of the current axis
+            ax30.legend(loc='center left', bbox_to_anchor=(1, 0.5), shadow=True)
+            
+            #%%
+            #!!!
+            """ Plots of Fourier Transforms
+                based on:
+                    https://stackoverflow.com/questions/9456037/scipy-numpy-fft-frequency-analysis
+            """
+            N = len(ecr[:,0])
+            T = 4.0 * 60.0 # 4 minutes in seconds
+            #T = 4 # minutes
+            #T = 1.0 * 4/60 # 4 minutes in terms of hours
+            
+            #a = scipy.fftpack.fft(ecr[:,0])
+            #b = scipy.fftpack.fft(satalt)
+            #c = scipy.fftpack.fft(angle)
+            
+            mag_a = np.fft.rfft(ecr[:,0]/ecr[:,0].max()) #normalise values
+            freq_a = np.fft.rfftfreq(N,T) # length,time diff
+            
+            mag_b = np.fft.rfft(satalt/satalt.max()) #normalise values
+            freq_b = np.fft.rfftfreq(N,T) # length,time diff
+            
+            mag_c = np.fft.rfft(angle/angle.max()) #normalise values
+            freq_c = np.fft.rfftfreq(N,T) # length,time diff
+            #%%
+            
+            ax20 = plt.subplot(gs1[8,:])   # 3:   :-3
+            plt.plot(freq_a, mag_a)
+            plt.ylabel('Magnitude', fontsize = 16)
+            plt.xlabel('Frequency (sec)', fontsize  = 16)
+            
+            plt.grid(True, which='both')
+            
+            # Shrink current axis by 20%
+            box = ax20.get_position()
+            ax20.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+            # Put a legend to the right of the current axis
+            ax20.legend(loc='center left', bbox_to_anchor=(1, 0.5), shadow=True)
+            
+            #%%
+            ax21 = plt.subplot(gs1[9,:])
+            plt.plot(freq_b, mag_b)
+            plt.ylabel('Magnitude', fontsize = 16)
+            plt.xlabel('Frequency (sec)', fontsize  = 16)
+            
+            plt.grid(True, which='both')
+            
+            # Shrink current axis by 20%
+            box = ax21.get_position()
+            ax21.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+            # Put a legend to the right of the current axis
+            ax21.legend(loc='center left', bbox_to_anchor=(1, 0.5), shadow=True)
+            
+            #%%
+            ax22 = plt.subplot(gs1[10,:])
+            plt.plot(freq_c, mag_c)
+            plt.ylabel('Magnitude', fontsize = 16)
+            plt.xlabel('Frequency (sec)', fontsize  = 16)
+            
+            plt.grid(True, which='both')
+            
+            # Shrink current axis by 20%
+            box = ax22.get_position()
+            ax22.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+            # Put a legend to the right of the current axis
+            ax22.legend(loc='center left', bbox_to_anchor=(1, 0.5), shadow=True)
+            
+
+            
+            #%%
+            print '###PRE-SAVE###'
             stemp = localpath + 'svn' + str(this_sat) + 'rawplot_' + str(cdstart.year) + '_' + str(cdstart.month) + '_' + str(cdstart.day) + '___' + str(cdend.year) + '_' + str(cdend.month) + '_' + str(cdend.day) + '.png'
+            #plt.show()
             plt.savefig(stemp,bbox_inches="tight")
             fig.clear() #cleanup
             plt.clf() #cleanup
             plt.cla() #cleanup
             plt.close(fig) #cleanup
             
-            del angle
-            del bheight
-            del curlabel
-            del dday
-            del ecr
-            del i
-            del j
-            del ourdates
-            del ourmpldates
-            del pcr
-            del points1
-            del points2
-            del points3
-            del points4
-            del points5
-            del points6
-            del points7
-            del points8
-            del points9
-            del stemp
-            del titletext
-            del year
-            del fig
+#            del angle
+#            del bheight
+#            del curlabel
+#            del dday
+#            del ecr
+#            del i
+#            del j
+#            del ourdates
+#            del ourmpldates
+#            del pcr
+#            del points1
+#            del points2
+#            del points3
+#            del points4
+#            del points5
+#            del points6
+#            del points7
+#            del points8
+#            del points9
+#            del stemp
+#            del titletext
+#            del year
+#            del fig
             
             gc.collect()
         
@@ -429,6 +558,28 @@ while True:
         gc.collect()
         break
     
+def comparison():
+    
+    #print 'Numpy Cross-correlation: %s' % (np.correlate(ecr[:,0],satalt))
+    #print 'Scipy pearsonr: %s' % (pearsonr(ecr[:,0],satalt))
+    #print 'Numpy corrcoef: %s' % (np.corrcoef(ecr[:,0],satalt))
+
+    #plt.plot(ecr[:,0]/np.gradient(satalt))
+
+    #plt.plot(signal.correlate(ecr[:,0], np.gradient(satalt), mode='same'))
+    
+    print '###'
+    
+    a = scipy.fftpack.fft(ecr[:,0])
+    b = scipy.fftpack.fft(satalt)
+    
+    print 'Numpy Cross-correlation:'
+    print np.correlate(a,b)
+    print 'Scipy pearsonr:' 
+    print pearsonr(a,b)
+    print 'Numpy corrcoef:'
+    print np.corrcoef(a,b)
     
 
+    plt.plot(signal.correlate(a,b,mode='same'))
         
