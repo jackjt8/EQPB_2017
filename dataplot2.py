@@ -43,10 +43,19 @@ def load_data(this_sat,cdstart,cdend,localpath):
     del ms # save RAM once we are finished.
     gc.collect()
     
-    if len(output_data[this_sat]) != 0:
-
+#    print output_data
+#    print len(output_data[this_sat])
+#    print output_data[this_sat] is not None
+    
+    
+    if len(output_data[this_sat]) != 0: # Seems to throw NoneType for 2005-08-14 ->20
         ddata = output_data[this_sat]['dropped_data']
         index2drop = [i for i, j in enumerate(ddata) if j == 1]
+        
+        if len(ddata) * 0.5 <= len(index2drop): # ie we must have at least 50% usuable data.
+            print 'High drop rate. Skipping.'
+            return [0], [0], [0], [0], [0], [0], [0], [0], [0]
+        
         del ddata # save RAM once we are finished.
         
         dday =  output_data[this_sat]['decimal_day']
@@ -106,6 +115,12 @@ def load_data(this_sat,cdstart,cdend,localpath):
         angle = np.degrees(np.arcsin((bheight/satalt)))
 
         return ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon
+    else:
+        return [0], [0], [0], [0], [0], [0], [0], [0], [0]
+    
+    
+    # Fall back failure.
+    return [0], [0], [0], [0], [0], [0], [0], [0], [0]
 
 
 
@@ -551,34 +566,43 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
     #ecr0_tpmin, ecr0_tpmax = turning_points(ecr[:,0])
     lon_tpmin, lon_tpmax = turning_points(sat_lon) # True single orbit
     
-    
     # values between first and second sat_lon min
     tempw = [] # bheight
     tempx = [] # ecr
     tempy = [] # sat_lon
     tempz = [] # sat alt
-    tempt = [] # sat time
+    tempt = [] # sat dday
+    tempyy = [] # year
     
     """ Get a single orbit """
+    
+    if len(lon_tpmin) < 2: # making sure lon_tpmin has values, else skip data point
+        print 'not getting enough min lon.. ?'
+        return
+    
     for i in range(lon_tpmin[0],lon_tpmin[1]):
         tempw.append(bheight[i]) # Given angle is derived from bheight and sat alt.
         tempx.append(ecr[:,0][i])
         tempy.append(sat_lon[i])
         tempz.append(satalt[i])
         tempt.append(dday[i])
+        tempyy.append(year[i])
     
     tempa = []
     tempb = []
     tempc = []
     tempd = []
     tempt2 = []
+    tempyy2 = []
     
     tempx2 = np.copy(tempx)
-    tempx2[tempx2 < 10] = 0 # remove noise from tempx
+    tempx2[tempx2 < 50] = 0 # remove noise from tempx
+                            # It seems there are peaks at ~20. 
         
     tempx2_stpmin, tempx2_stpmax = turning_points(smooth(tempx2,20)) # Removes stuff.
     
-    
+    if not tempx2_stpmin: # making sure tempx2_stpmin has values, else skip data point
+        return
     
     for i in range(0,tempx2_stpmin[0]):
         tempa.append(tempw[i]) # bheight w
@@ -586,6 +610,7 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
         tempc.append(tempy[i]) # lon y
         tempd.append(tempz[i]) # alt z
         tempt2.append(tempt[i]) # time t
+        tempyy2.append(tempyy[i]) # year yy
         
         
     #def gaussian(x, amp, cen, wid):
@@ -607,10 +632,21 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
     https://stackoverflow.com/questions/47773178/gaussian-fit-returning-negative-sigma"""    
     
     peak = tempt2[tempb > (np.exp(-0.5)*tempb.max())]
+    if len(peak) < 5: # 2 is min, 5 to be safe.
+        print 'not enough data in peak'
+        return
     guess_sigma = 0.5*(peak.max() - peak.min())
     
     p0_vals = [max(tempb),tempt2[np.argmax(tempb)],guess_sigma**2] # ie amp = max ; cen = max position in time ; wid = optimise
-    popt, pcov = curve_fit(gaussian, np.concatenate(tempt2, axis=0 ), np.asarray(tempb), p0_vals, maxfev = 3200)
+    try:
+        popt, pcov = curve_fit(gaussian, np.concatenate(tempt2, axis=0 ), np.asarray(tempb), p0_vals, maxfev = 6400)
+    except RuntimeError:
+        print("Error - curve_fit failed")
+        plt.clf()
+        plt.plot(tempb)
+        print max(tempb)
+        plt.savefig("failed.png")
+        return # Report error but don't crash.
     #
 #    plt.plot(np.concatenate( tempt2, axis=0 ), tempb, 'b-', label='data')
 #    plt.plot(np.concatenate( tempt2, axis=0 ), gaussian(np.concatenate( tempt2, axis=0 ), *popt), 'r-',
@@ -633,26 +669,30 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
 #    plt.plot(tempt2, tempb, label='ecr')
 #    plt.show()
     
-    with open("gaussfit.txt", 'a') as f:
-        DAT = np.asarray([this_sat, year[np.argmax(tempb)], dday[np.argmax(tempb)], popt[0], popt[1], np.sqrt(popt[2])])
-        np.savetxt(f, DAT[None], delimiter=' ')
+    gaussfile = "gaussfit" + str(this_sat) + ".txt"
+    with open(gaussfile, 'a') as f:
+        DAT = np.asarray([this_sat, tempyy2[np.argmax(tempb)], popt[0], popt[1], np.sqrt(popt[2])])
+        #fmt='%i %i %f %f %f %f'
+        np.savetxt(f, DAT[None], fmt='%i %i %f %f %f')
+    
+    return # end function
 
 
 def main():
     truestart = datetime(2000,12,31,0,0,0) # 2001,1,7,0,0,0
     
-    start_date = datetime(2001,1,7,0,0,0);
-    end_date = datetime(2017,1,10,0,0,0);
-    #start_date = datetime(2015,1,7,0,0,0);
-    #end_date = datetime(2015,1,13,0,0,0);
+    #start_date = datetime(2001,1,7,0,0,0);
+    #end_date = datetime(2017,1,10,0,0,0);
+    start_date = datetime(2009,10,4,0,0,0);
+    end_date = datetime(2010,10,4,0,0,0);
     
     localpath = abspath(getsourcefile(lambda:0))[:-12]
-    #satlist = []
-    #satlist.extend([41,48])
-    #satlist.extend([53,54,55,56,57,58,59])
-    #satlist.extend([60,61,62,63,64,65,66,67,68,69])
-    #satlist.extend([70,71,72,73])
-    satlist = [41]
+    satlist = []
+    satlist.extend([41,48])
+    satlist.extend([53,54,55,56,57,58,59])
+    satlist.extend([60,61,62,63,64,65,66,67,68,69])
+    satlist.extend([70,71,72,73])
+    #satlist = [41]
     
     maxsizeondisk = 100 # given in GB.
     
@@ -676,16 +716,20 @@ def main():
     #%%
     
     while True:
+        
         print 'cdstart - %s' % (cdstart)
         print 'cdend - %s' % (cdend)
         
         # do stuff
         for this_sat in satlist:
             ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon = load_data(this_sat,cdstart,cdend,localpath)
-            fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle)
+            if len(ecr) > 10:
+                fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon)
+            print ' '
         # plot
         
-        cdstart += relativedelta(weeks=+52)
+        #cdstart += relativedelta(weeks=+52)
+        cdstart += relativedelta(weeks=+4)
         cdend = cdstart + relativedelta(days=+6)
     
         if cdend.year >= end_date.year and cdend.month >= end_date.month:
