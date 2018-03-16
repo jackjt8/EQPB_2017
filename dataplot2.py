@@ -27,6 +27,7 @@ from lmfit import  Model
 
 from inspect import getsourcefile
 from os.path import abspath
+import sys
 
 #in order to address memory issues...
 import gc
@@ -567,6 +568,8 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
     lon_tpmin, lon_tpmax = turning_points(sat_lon) # True single orbit
     
     # values between first and second sat_lon min
+    #!!!
+    tempv = [] # angle
     tempw = [] # bheight
     tempx = [] # ecr
     tempy = [] # sat_lon
@@ -577,10 +580,11 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
     """ Get a single orbit """
     
     if len(lon_tpmin) < 2: # making sure lon_tpmin has values, else skip data point
-        print 'not getting enough min lon.. ?'
+        print 'not getting enough min lon..? Likily due to loading two data files.'
         return
     
     for i in range(lon_tpmin[0],lon_tpmin[1]):
+        tempv.append(angle[i])
         tempw.append(bheight[i]) # Given angle is derived from bheight and sat alt.
         tempx.append(ecr[:,0][i])
         tempy.append(sat_lon[i])
@@ -588,6 +592,7 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
         tempt.append(dday[i])
         tempyy.append(year[i])
     
+    tempe = []
     tempa = []
     tempb = []
     tempc = []
@@ -602,9 +607,22 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
     tempx2_stpmin, tempx2_stpmax = turning_points(smooth(tempx2,20)) # Removes stuff.
     
     if not tempx2_stpmin: # making sure tempx2_stpmin has values, else skip data point
+        print 'unable to find any minimums to work with'
         return
     
-    for i in range(0,tempx2_stpmin[0]):
+    # this is to fix for turning_points incorrectly marking certain peaks as minimums...
+    temp = []
+    for i in tempx2_stpmin:
+        if tempx2[i] <= 50:
+            temp.append(i)         
+    tempx2_stpmin = temp
+    
+    if len(tempx2_stpmin) < 2: # making sure tempx2_stpmin has values, else skip data point
+        print 'not enough minimums to work with'
+        return
+    
+    for i in range(tempx2_stpmin[0],tempx2_stpmin[1]):
+        tempe.append(tempv[i]) # angle v
         tempa.append(tempw[i]) # bheight w
         tempb.append(tempx2[i]) # ecr x
         tempc.append(tempy[i]) # lon y
@@ -629,17 +647,33 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
     
     """ gaussian sigma -> sigma_squared
     test sigma -> peak max min
-    https://stackoverflow.com/questions/47773178/gaussian-fit-returning-negative-sigma"""    
+    https://stackoverflow.com/questions/47773178/gaussian-fit-returning-negative-sigma"""        
     
-    peak = tempt2[tempb > (np.exp(-0.5)*tempb.max())]
-    if len(peak) < 5: # 2 is min, 5 to be safe.
-        print 'not enough data in peak'
-        return
+    # dday - ecr
+#    peak = tempt2[tempb > (np.exp(-0.5)*tempb.max())]
+#    if len(peak) < 5: # 2 is min, 5 to be safe.
+#        print 'not enough data in peak'
+#        return
+#    guess_sigma = 0.5*(peak.max() - peak.min()) 
+#    p0_vals = [max(tempb),tempt2[np.argmax(tempb)],guess_sigma**2] # ie amp = max ; cen = max position in time ; wid = optimise
+    
+    # angle - ecr
+    tempe = np.array(tempe) # As it's not a true np array...
+    peak = tempe[tempb > (np.exp(-0.5)*tempb.max())]
     guess_sigma = 0.5*(peak.max() - peak.min())
+    p0_vals = [max(tempb),tempe[np.argmax(tempb)],guess_sigma**2] # ie amp = max ; cen = max position in time ; wid = optimise
+
     
-    p0_vals = [max(tempb),tempt2[np.argmax(tempb)],guess_sigma**2] # ie amp = max ; cen = max position in time ; wid = optimise
+    
     try:
-        popt, pcov = curve_fit(gaussian, np.concatenate(tempt2, axis=0 ), np.asarray(tempb), p0_vals, maxfev = 6400)
+        # dday - ecr
+        #popt, pcov = curve_fit(gaussian, np.concatenate(tempt2, axis=0 ), np.asarray(tempb), p0_vals, maxfev = 6400)
+        #popt, pcov, infodict, errmsg, ier = curve_fit(gaussian, np.concatenate(tempt2, axis=0 ), np.asarray(tempb), p0_vals, maxfev = 6400, full_output = True)
+        
+        # angle - ecr
+        popt, pcov, infodict, errmsg, ier = curve_fit(gaussian, np.concatenate(tempe, axis=0 ), np.asarray(tempb), p0_vals, maxfev = 6400, full_output = True)
+        
+        #0 popt, 1 pcov, 2 infodict, 3 errmsg, 4 ier
     except RuntimeError:
         print("Error - curve_fit failed")
         plt.clf()
@@ -647,52 +681,93 @@ def fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat
         print max(tempb)
         plt.savefig("failed.png")
         return # Report error but don't crash.
-    #
-#    plt.plot(np.concatenate( tempt2, axis=0 ), tempb, 'b-', label='data')
-#    plt.plot(np.concatenate( tempt2, axis=0 ), gaussian(np.concatenate( tempt2, axis=0 ), *popt), 'r-',
-#    label='fit: amp=%5.3f, x=%5.3f, sig_sq=%5.3f' % tuple(popt))
-#    plt.legend()
-#    plt.show()
-#    
-#    print "sigma = %s" % (np.sqrt(popt[2]))
-#    
-#    plt.subplot(411)
-#    plt.plot(tempt2, tempc,'bo', label='sat lon')
-#    plt.legend()
-#    plt.subplot(412)
-#    plt.plot(tempt2, tempa,'r-', label='bheight')
-#    plt.legend()
-#    plt.subplot(413)
-#    plt.plot(tempt2, tempd,'k--', label='satalt')
-#    plt.legend()
-#    plt.subplot(414)
-#    plt.plot(tempt2, tempb, label='ecr')
-#    plt.show()
+    
+    #%%
+    
+    # 
+    s_sq = (infodict['fvec']**2).sum()/ (len(infodict['fvec'])-len(popt))
     
     gaussfile = "gaussfit" + str(this_sat) + ".txt"
     with open(gaussfile, 'a') as f:
-        DAT = np.asarray([this_sat, tempyy2[np.argmax(tempb)], popt[0], popt[1], np.sqrt(popt[2])])
+        DAT = np.asarray([this_sat, tempyy2[np.argmax(tempb)], popt[0], popt[1], np.sqrt(popt[2]), s_sq])
+        #print DAT
         #fmt='%i %i %f %f %f %f'
-        np.savetxt(f, DAT[None], fmt='%i %i %f %f %f')
-    
+        np.savetxt(f, DAT[None], fmt='%i %i %f %f %f %f')
+        print 'Data writen to file.'
     return # end function
+
+
+def gauss_plot(satlist):
+    for this_sat in satlist:        
+        gaussfile = "gaussfit" + str(this_sat) + ".txt"        
+        satnum, yyyy, amp, cen, sig, rsquared, s_sq = np.loadtxt(gaussfile,delimiter=' ', unpack=True)
+        
+        ourdates = []
+        for i in range(len(cen)):
+            ourdates.append(datetime(int(yyyy[i]),1,1,0,0,0) + timedelta(days=cen[i]))
+        # convert between datetime objects and matplotlib format
+        ourmpldates = mpld.date2num(ourdates)
+        
+        def yearline(yyyy):
+            for i in range(len(yyyy)):
+                datetime(int(yyyy[i]),1,1,0,0,0)
+                plt.axvline(x=datetime(int(yyyy[i]),1,1,0,0,0))
+        
+#        fig = plt.figure(figsize=(30, 30), dpi=80)
+#        plt.subplot(411)
+#        plt.plot_date(ourmpldates,sig, label='Sig')
+#        yearline(yyyy)
+#        #plt.legend(loc='center left')
+#        plt.subplot(412)
+#        plt.plot_date(ourmpldates,amp, label='Amp')
+#        yearline(yyyy)
+#        plt.subplot(413)
+#        plt.plot_date(ourmpldates,rsquared, label='rsquared of fit')
+#        yearline(yyyy)
+#        plt.axhline(y=1)
+#        plt.subplot(414)
+#        plt.hist(amp, label='distribution of amp values')
+        
+        #%%
+        
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(20,10), dpi=80)
+        
+        L1, = ax1.plot_date(ourmpldates,sig, label='Sig')
+        L2, = ax2.plot_date(ourmpldates,amp, label='Amp')
+        L3, = ax3.plot_date(ourmpldates,rsquared, label='rsquared of fit')
+        L4, = ax4.hist(amp, label='distribution of amp values')
+        
+        lgd = ax1.legend( handles=[L1, L2, L3, L4], loc="upper left", bbox_to_anchor=[1.1, 1.05],
+           ncol=2, shadow=True, title="Legend", fancybox=True)
+        
+        #fig.show()
+        plt.savefig('foo.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+        #%%
+
+        
+        stemp = "gaussfit" + str(this_sat) + "_plot.png"
+        plt.savefig(stemp,bbox_inches="tight")
+        fig.clear() #cleanup
+        plt.clf() #cleanup
+        plt.cla() #cleanup
+        plt.close(fig) #cleanup
 
 
 def main():
     truestart = datetime(2000,12,31,0,0,0) # 2001,1,7,0,0,0
     
-    #start_date = datetime(2001,1,7,0,0,0);
-    #end_date = datetime(2017,1,10,0,0,0);
-    start_date = datetime(2009,10,4,0,0,0);
-    end_date = datetime(2010,10,4,0,0,0);
+    start_date = datetime(2001,1,7,0,0,0);
+    end_date = datetime(2017,1,10,0,0,0);
+    #start_date = datetime(2001,3,4,0,0,0);
+    #end_date = datetime(2001,3,10,0,0,0);
     
     localpath = abspath(getsourcefile(lambda:0))[:-12]
     satlist = []
     satlist.extend([41,48])
     satlist.extend([53,54,55,56,57,58,59])
-    satlist.extend([60,61,62,63,64,65,66,67,68,69])
-    satlist.extend([70,71,72,73])
-    #satlist = [41]
+#    satlist.extend([60,61,62,63,64,65,66,67,68,69])
+#    satlist.extend([70,71,72,73])
+#    satlist = [41]
     
     maxsizeondisk = 100 # given in GB.
     
@@ -729,7 +804,7 @@ def main():
         # plot
         
         #cdstart += relativedelta(weeks=+52)
-        cdstart += relativedelta(weeks=+4)
+        cdstart += relativedelta(weeks=+1)
         cdend = cdstart + relativedelta(days=+6)
     
         if cdend.year >= end_date.year and cdend.month >= end_date.month:
@@ -739,115 +814,21 @@ def main():
 if __name__ == '__main__':
     main()
             
-#truestart = datetime(2000,12,31,0,0,0) # 2001,1,7,0,0,0
-#start_date = datetime(2001,1,7,0,0,0);
-#end_date = datetime(2001,1,13,0,0,0);
-##start_date = datetime(2002,1,7,0,0,0);
-##end_date = datetime(2002,1,13,0,0,0);
-#cdstart = truestart # Current Date we are looking at.
-#while True:
-#    cdstart += relativedelta(days=7)
-#    if cdstart >= start_date:
-#        break
-#cdend = cdstart + relativedelta(days=6)
-#localpath = abspath(getsourcefile(lambda:0))[:-12]
+
+#satlist = []
+#satlist.extend([41,48])
+#satlist.extend([53,54,55,56,57,58,59])
+#satlist.extend([60,61,62,63,64,65,66,67,68,69])
+#satlist.extend([70,71,72,73])
+
 #
-#this_sat = 41;
-#
-#ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon = load_data(this_sat,cdstart,cdend,localpath)
-##plot(41, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle)
-##fit(ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon)
-#
-#""" Gaussian fit for ecr 0 
-#Based upon http://cars9.uchicago.edu/software/python/lmfit/model.html"""
-## get index of minimums
-##ecr0_tpmin, ecr0_tpmax = turning_points(ecr[:,0])
-#lon_tpmin, lon_tpmax = turning_points(sat_lon) # True single orbit
-#
-#
-## values between first and second sat_lon min
-#tempw = [] # bheight
-#tempx = [] # ecr
-#tempy = [] # sat_lon
-#tempz = [] # sat alt
-#tempt = [] # sat time
-#
-#""" Get a single orbit """
-#for i in range(lon_tpmin[0],lon_tpmin[1]):
-#    tempw.append(bheight[i]) # Given angle is derived from bheight and sat alt.
-#    tempx.append(ecr[:,0][i])
-#    tempy.append(sat_lon[i])
-#    tempz.append(satalt[i])
-#    tempt.append(dday[i])
-#
-#tempa = []
-#tempb = []
-#tempc = []
-#tempd = []
-#tempt2 = []
-#
-#tempx2 = np.copy(tempx)
-#tempx2[tempx2 < 10] = 0 # remove noise from tempx
-#    
-#tempx2_stpmin, tempx2_stpmax = turning_points(smooth(tempx2,20)) # Removes stuff.
-#
-#
-#
-#for i in range(0,tempx2_stpmin[0]):
-#    tempa.append(tempw[i]) # bheight w
-#    tempb.append(tempx2[i]) # ecr x
-#    tempc.append(tempy[i]) # lon y
-#    tempd.append(tempz[i]) # alt z
-#    tempt2.append(tempt[i]) # time t
-#    
-#    
-##def gaussian(x, amp, cen, wid):
-##    "1-d gaussian: gaussian(x, amp, cen, wid)"
-##    return (amp/(np.sqrt(2*np.pi)*wid)) * np.exp(-(x-cen)**2 /(2*wid**2))
-##
-##def func(x, a, x0, sigma):
-##    return a*np.exp(-(x-x0)**2/(2*sigma**2))
-#    
-#def gaussian(x, *p):
-#    A, mu, sigma_squared = p
-#    return A*np.exp(-(x-mu)**2/(2.*sigma_squared))
-#    
-#tempb = np.array(tempb) # As it's not a true np array...
-#tempt2 = np.array(tempt2) # As it's not a true np array...
-#
-#""" gaussian sigma -> sigma_squared
-#test sigma -> peak max min
-#https://stackoverflow.com/questions/47773178/gaussian-fit-returning-negative-sigma"""    
-#
-#peak = tempt2[tempb > (np.exp(-0.5)*tempb.max())]
-#guess_sigma = 0.5*(peak.max() - peak.min())
-#
-#p0_vals = [max(tempb),tempt2[np.argmax(tempb)],guess_sigma**2] # ie amp = max ; cen = max position in time ; wid = optimise
-#popt, pcov = curve_fit(gaussian, np.concatenate(tempt2, axis=0 ), np.asarray(tempb), p0_vals, maxfev = 3200)
-##
-#plt.plot(np.concatenate( tempt2, axis=0 ), tempb, 'b-', label='data')
-#plt.plot(np.concatenate( tempt2, axis=0 ), gaussian(np.concatenate( tempt2, axis=0 ), *popt), 'r-',
-#label='fit: amp=%5.3f, x=%5.3f, sig_sq=%5.3f' % tuple(popt))
-#plt.legend()
-#plt.show()
-#
-#print "sigma = %s" % (np.sqrt(popt[2]))
-#
-#plt.subplot(411)
-#plt.plot(tempt2, tempc,'bo', label='sat lon')
-#plt.legend()
-#plt.subplot(412)
-#plt.plot(tempt2, tempa,'r-', label='bheight')
-#plt.legend()
-#plt.subplot(413)
-#plt.plot(tempt2, tempd,'k--', label='satalt')
-#plt.legend()
-#plt.subplot(414)
-#plt.plot(tempt2, tempb, label='ecr')
-#plt.show()
-#
-#with open("gaussfit.txt", 'a') as f:
-#    DAT = np.asarray([this_sat, year[np.argmax(tempb)], dday[np.argmax(tempb)], popt[0], popt[1], np.sqrt(popt[2])])
-#    np.savetxt(f, DAT[None], delimiter=' ')
-#
-#
+#gauss_plot([41])
+
+
+
+
+
+
+
+
+
