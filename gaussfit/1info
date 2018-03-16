@@ -1,1 +1,3 @@
-SVN, YEAR(at gaussian max), Amp of Gaussian, center of Gaussian, sigma
+([this_sat, tempyy2[np.argmax(tempb)], popt[0], popt[1], np.sqrt(popt[2]), rsquared, s_sq])
+
+SVN, Year (at gaussian max), Amp of Gaussian, center of Gaussian, sigma, rsquared, reduced Chi-squared
