@@ -951,23 +951,24 @@ def method2(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle,
                            peak_angle_width_f.min(), scipy.stats.sem(peak_angle_width_f)[0],
                            peak_angle_width_f.mean(), scipy.stats.sem(peak_angle_width_f).mean(),
                            peak_angle_width_f.max(), scipy.stats.sem(peak_angle_width_f)[1],
+                           (np.mean(peak_angle_width_f[:,1]) - np.mean(peak_angle_width_f[:,0])), scipy.stats.sem(np.mean(peak_angle_width_f[:,1]) - np.mean(peak_angle_width_f[:,0])),
                            np.mean(velocity), scipy.stats.sem(velocity),
                            np.mean(periodm), scipy.stats.sem(periodm)
-                           ]) # 9 x 2 = 18
+                           ]) # 10 x 2
         #print DAT
         #fmt='%i %i %f %f %f %f'
-        np.savetxt(f, DAT[None], fmt='%f %i %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f')
+        np.savetxt(f, DAT[None], fmt='%f %i %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f')
         print 'Data writen to file.'
 
 def method2_plot(satlist):
     for this_sat in satlist:        
         statfile = "statdata" + str(this_sat) + ".txt"
         # This assignment is silly... but I don't believe I can shorten it.        
-        dday, year, ch0mean, ch0meanse, peakmean, peakmeanse, pdw, pdwse, pawmin, pawminse, pawmean, pawmeanse, pawmax, pawmaxse, vel, velse, periodm, periodmse = np.loadtxt(statfile, delimiter=' ', unpack=True) # 18
+        dday, year, ch0mean, ch0meanse, peakmean, peakmeanse, pdw, pdwse, pawmin, pawminse, pawmean, pawmeanse, pawmax, pawmaxse, paww, pawwse, vel, velse, periodm, periodmse = np.loadtxt(statfile, delimiter=' ', unpack=True) # 18
         
         ourdates = []
-        for i in range(len(cen)):
-            ourdates.append(datetime(int(yyyy[i]),1,1,0,0,0) + timedelta(days=cen[i]))
+        for i in range(len(dday)):
+            ourdates.append(datetime(int(year[i]),1,1,0,0,0) + timedelta(days=dday[i]))
         # convert between datetime objects and matplotlib format
         ourmpldates = mpld.date2num(ourdates)
         
@@ -1026,10 +1027,10 @@ def main():
     
     localpath = abspath(getsourcefile(lambda:0))[:-12]
     satlist = []
-    satlist.extend([41,48])
-    satlist.extend([53,54,55,56,57,58,59])
+#    satlist.extend([41,48])
+#    satlist.extend([53,54,55,56,57,58,59])
 #    satlist.extend([60,61,62,63,64,65,66,67,68,69])
-#    satlist.extend([70,71,72,73])
+    satlist.extend([70,71,72,73])
 #    satlist = [41]
     
     maxsizeondisk = 100 # given in GB.
