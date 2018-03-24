@@ -972,44 +972,107 @@ def method2_plot(satlist):
         # convert between datetime objects and matplotlib format
         ourmpldates = mpld.date2num(ourdates)
         
-        def yearline(yyyy):
-            for i in range(len(yyyy)):
-                datetime(int(yyyy[i]),1,1,0,0,0)
-                plt.axvline(x=datetime(int(yyyy[i]),1,1,0,0,0))
+        yearu = np.unique(year)
         
-#        fig = plt.figure(figsize=(30, 30), dpi=80)
-#        plt.subplot(411)
-#        plt.plot_date(ourmpldates,sig, label='Sig')
-#        yearline(yyyy)
-#        #plt.legend(loc='center left')
-#        plt.subplot(412)
-#        plt.plot_date(ourmpldates,amp, label='Amp')
-#        yearline(yyyy)
-#        plt.subplot(413)
-#        plt.plot_date(ourmpldates,rsquared, label='rsquared of fit')
-#        yearline(yyyy)
-#        plt.axhline(y=1)
-#        plt.subplot(414)
-#        plt.hist(amp, label='distribution of amp values')
+        ch0mean2 = ch0mean[ch0mean < 30000]
+        peakmean2 = peakmean[ch0mean < 30000]
+        ourmpldates2 = ourmpldates[ch0mean < 30000]
         
         #%%
         
-        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(20,10), dpi=80)
+        #fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(20,10), dpi=80)
         
-        L1, = ax1.plot_date(ourmpldates,sig, label='Sig')
-        L2, = ax2.plot_date(ourmpldates,amp, label='Amp')
-        L3, = ax3.plot_date(ourmpldates,rsquared, label='rsquared of fit')
-        L4, = ax4.hist(amp, label='distribution of amp values')
+        fig = plt.figure(figsize=(20, 15), dpi=80)
+        gs1 = gridspec.GridSpec(4, 2) #7,6
+        gs1.update(wspace=0.15, hspace=0.15)
+        fig.tight_layout()
+    
+
+        titletext = 'method2 plot SVN%s \n Velocity=%2.2fkm/s ; Period=%2.2f minutes' % (this_sat, np.nanmean(vel), np.nanmean(periodm) )
+        #print titletext
+        plt.suptitle(titletext, fontsize=20)
+    
+        fig.canvas.draw()
         
-        lgd = ax1.legend( handles=[L1, L2, L3, L4], loc="upper left", bbox_to_anchor=[1.1, 1.05],
-           ncol=2, shadow=True, title="Legend", fancybox=True)
+        #%%
+        
+        ax1 = plt.subplot(gs1[0,:])
+        
+        for i in range(int(yearu[0]),int(yearu[len(yearu)-1]+2)):
+            datetime(i,1,1,0,0,0)
+            ax1.axvline(x=datetime(i,1,1,0,0,0), color='grey',lw=.5)     
+        ax1.grid()
+        
+        L1, = ax1.plot_date(ourmpldates2,ch0mean2, label='ch0 mean')
+        L2, = ax1.plot_date(ourmpldates2,peakmean2, label='peak ch0 mean')
+        
+        #ax1.set_title('Ch0 mean and peak mean')
+        ax1.set_ylabel('Ch0 count rate (Hz)', fontsize = 10)
+        #ax1.set_xlabel('Date', fontsize = 10)
+        ax1.legend(fancybox=True)
+        
+        #%%
+        
+        ax2 = plt.subplot(gs1[1,:],sharex=ax1)
+        
+        for i in range(int(yearu[0]),int(yearu[len(yearu)-1]+2)):
+            datetime(i,1,1,0,0,0)
+            ax2.axvline(x=datetime(i,1,1,0,0,0), color='grey',lw=.5)     
+        ax2.grid()
+        
+        L3, = ax2.plot_date(ourmpldates,pdw, label='peak dday width')
+        ax2.axhline(y=np.nanmean(pdw), label='Mean = %.2f' %(np.nanmean(pdw)), color='red' )
+        ax2.axhline(y=np.nanmean(pdw)+np.nanstd(pdw), label='Standard Deviation = %.2f' %(np.nanstd(pdw)), color='green' )
+        ax2.axhline(y=np.nanmean(pdw)-np.nanstd(pdw), color='green' )
+        ax2.set_ylabel('Collection width in decimal day', fontsize = 10)
+        ax2.legend(fancybox=True)
+        
+        #%%
+        
+        ax3 = plt.subplot(gs1[2,:],sharex=ax1)
+        
+        for i in range(int(yearu[0]),int(yearu[len(yearu)-1]+2)):
+            datetime(i,1,1,0,0,0)
+            ax3.axvline(x=datetime(i,1,1,0,0,0), color='grey',lw=.5)       
+        ax3.grid()
+        
+        L3, = ax3.plot_date(ourmpldates, pawmin, label='peak angle width min')
+        L3, = ax3.plot_date(ourmpldates, pawmean, label='peak angle width mean')
+        L3, = ax3.plot_date(ourmpldates, pawmax, label='peak angle width max')
+        
+        ax3.set_ylabel('Angular width in degrees', fontsize = 10)
+        ax3.legend(fancybox=True)
+        
+        #%%
+        
+        ax4 = plt.subplot(gs1[3,:],sharex=ax1)
+        
+        for i in range(int(yearu[0]),int(yearu[len(yearu)-1]+2)):
+            datetime(i,1,1,0,0,0)
+            ax4.axvline(x=datetime(i,1,1,0,0,0), color='grey',lw=.5)       
+        ax4.grid()
+        
+        L4, = ax4.plot_date(ourmpldates, paww, label='peak angle width width')
+        ax4.axhline(y=np.nanmean(paww), label='Mean = %.2f' %(np.nanmean(paww)), color='red' )
+        ax4.axhline(y=np.nanmean(paww)+np.nanstd(paww), label='Standard Deviation = %.2f' %(np.nanstd(paww)), color='green' )
+        ax4.axhline(y=np.nanmean(paww)-np.nanstd(paww), color='green' )
+
+        ax4.set_ylabel('Angular width in degrees', fontsize = 10)
+        ax4.set_xlabel('Decimal Day', fontsize = 10)
+        ax4.legend(fancybox=True)
+        
+    
+        #%%
+        # Force x-axis...
+        ax1.set_xlim(datetime(2001,1,1,0,0,0), datetime(2017,1,1,0,0,0))
+        
+        
+        #%%
         
         #fig.show()
-        plt.savefig('foo.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
-        #%%
+        #plt.savefig('foo.png', bbox_inches='tight')
 
-        
-        stemp = "gaussfit" + str(this_sat) + "_plot.png"
+        stemp = "method2_" + str(this_sat) + "_plot.png"
         plt.savefig(stemp,bbox_inches="tight")
         fig.clear() #cleanup
         plt.clf() #cleanup
@@ -1029,8 +1092,8 @@ def main():
     satlist = []
 #    satlist.extend([41,48])
 #    satlist.extend([53,54,55,56,57,58,59])
-#    satlist.extend([60,61,62,63,64,65,66,67,68,69])
-    satlist.extend([70,71,72,73])
+    satlist.extend([60,61,62,63,64,65,66,67,68,69])
+#    satlist.extend([70,71,72,73])
 #    satlist = [41]
     
     maxsizeondisk = 100 # given in GB.
@@ -1076,214 +1139,14 @@ def main():
             gc.collect()
             break
         
-if __name__ == '__main__':
-    main()
-            
+#if __name__ == '__main__':
+#    main()
+  
 
-##satlist = []
-##satlist.extend([41,48])
-##satlist.extend([53,54,55,56,57,58,59])
-##satlist.extend([60,61,62,63,64,65,66,67,68,69])
-##satlist.extend([70,71,72,73])
-#
-##
-##gauss_plot([41])
-#            
-#truestart = datetime(2000,12,31,0,0,0) # 2001,1,7,0,0,0
-#
-#start_date = datetime(2001,1,7,0,0,0);
-#end_date = datetime(2017,1,10,0,0,0);
-##start_date = datetime(2001,3,4,0,0,0);
-##end_date = datetime(2001,3,10,0,0,0);
-#
-#localpath = abspath(getsourcefile(lambda:0))[:-12]
-#satlist = [41]
-#this_sat = 41
-#
-#cdstart = truestart # Current Date we are looking at.
-#while True:
-#    cdstart += relativedelta(days=7)
-#    if cdstart >= start_date:
-#        break
-#
-##cdstart = start_date
-##cdend = end_date
-#cdend = cdstart + relativedelta(days=6)
-#       
-#ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon = load_data(this_sat,cdstart,cdend,localpath)
-#
-##def method2(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon):
-#""" 
-#    1) ecr average    np.mean(ch0)
-#    2) ecr maximum averaged    np.mean(ch0[ch0_maxf])
-#    3) ecr-dday width at 100 counts    peak_dday_width
-#    4) ecr-angle width at 100 counts?     peak_angle_width
-#    5) flight velocity    velocity
-#    6) orbital period    period (s), periodm (m), periodh (h)
-#"""
-#
-#if len(np.unique(sat_lon)) < len(sat_lon)*0.5: # making sure lon_tpmin has values, else skip data point
-#    print 'Low data quality or loaded two data files.'
-##    return
-#
-#ch0 = np.copy(ecr[:,0])
-#ch0[ch0 < 50] = 0 # removes noise
-#
-#ch0_min, ch0_max = turning_points(smooth(ch0,20))
-#
-#temp = []
-#for i in ch0_max: # filter maximums that are below the mean
-#    if ch0[i] >= np.mean(ch0):
-#        temp.append(i) 
-#ch0_maxf = temp
-#
-#temp = []
-#for i in ch0_min:
-#    if ch0[i] <= 10:
-#        temp.append(i)
-#ch0_minf = temp
-#
-##%%
-#
-#if len(ch0_minf) >= 2:
-#    i = 0
-#    peak_dday_width = []
-#    peak_angle_width = []
-#    while True:
-#        # Lower 100 count check
-#        tempL = ch0_minf[i]
-#        while True:
-#            tempL += 1
-#            if ch0[tempL] >= 200: # ie lock value when ch0 exceedes 100 counts
-#                break
-#        
-#        # Upper 100 count check
-#        tempU = ch0_minf[i + 1]
-#        while True:
-#            tempU -= 1
-#            if ch0[tempL] >= 200: # ie lock value when ch0 exceedes 100 counts
-#                break
-#        
-#        i += 1
-#        peak_dday_width.append(dday[tempU] - dday[tempL])
-#        peak_angle_width.append([angle[tempL], angle[tempU]])
-#        if i+1 >= len(ch0_minf): # checking if secondary condition exceeds size.
-#            break
-#
-##tempx = []
-##tempy = []
-##
-##for i in range(ch0_minf[0],ch0_minf[1]):
-##    tempx.append(angle[i])
-##    tempy.append(ch0[i])
-##    
-##    
-##plt.plot(tempx,tempy)
-##plt.show()
-#
-##%%
-## Conversion http://keisan.casio.com/exec/system/1224665242    
-#    
-#Re = 6378.14 # km
-#
-#velocity = np.sqrt(398600.5 / (Re * satalt)) # km/s
-#period = 2 * np.pi * (Re * satalt) / velocity # sec
-#periodm = period / 60
-#periodh = periodm / 60
-#
-##%%
-#
-##temp2 = []
-##for i in range(len(dday)-1):
-##    temp2.append(dday[i+1] - dday[i])
-##
-##
-### dt is set globally now...
-###dt = 0.0666667 # 4 minutes in hours
-###dt = 0.066672
-###dt = 4.0 / 60.0 / 24.0
-##
-### Do FFT analysis of array
-##FFT = scipy.fft(smooth(ch0,20))
-##
-### Getting the related frequencies
-##freqs = scipy.fftpack.fftfreq(len(ch0), dt)
-##
-##plt.subplot(211)
-##plt.plot(dday,smooth(ch0,20))
-##plt.xlabel('dday')
-##plt.ylabel('ch0')
-##plt.subplot(212)
-##plt.plot(freqs, scipy.log10(abs(FFT)), '.')
-##plt.xlim(-50, 50)   
-##plt.show()
-#
-#"""
-#    1) ecr average    np.mean(ch0)
-#    2) ecr maximum averaged    np.mean(ch0[ch0_maxf])
-#    3) ecr-dday width at 100 counts    peak_dday_width
-#    4) ecr-angle width at 100 counts?     peak_angle_width
-#    5) flight velocity    velocity
-#    6) orbital period    period (s), periodm (m), periodh (h)
-#"""
-#
-#peak_angle_width_f = peak_angle_width
-#toggle = 0
-#for i in range(len(peak_angle_width)):
-#    if peak_angle_width[i][1] > peak_angle_width[i][0]: # -35, 65
-#        pass
-#    else: # i[0] > i[1] ie 35, -65
-#        peak_angle_width_f[i] = [-peak_angle_width[i][0], -peak_angle_width[i][1]] # ie invert points.
-#peak_angle_width_f = np.array(peak_angle_width_f)       
-#
-#
-##print dday[int(len(dday)/2)]
-##print year[int(len(dday)/2)]
-##
-##print np.mean(ch0)
-##print scipy.stats.sem(ch0) # standard error in ch0
-##print np.mean(ch0[ch0_maxf])
-##print scipy.stats.sem(ch0[ch0_maxf]) # standard error in peaks ch0
-##print np.mean(peak_dday_width)
-##print scipy.stats.sem(peak_dday_width) # standard error in dday width
-##
-##print peak_angle_width_f.min()
-##print scipy.stats.sem(peak_angle_width_f)[0] # standard error in angle width min
-##print peak_angle_width_f.mean()
-##print scipy.stats.sem(peak_angle_width_f).mean() # standard error in angle width mean
-##print peak_angle_width_f.max()
-##print scipy.stats.sem(peak_angle_width_f)[1] # standard error in angle width max
-##
-##
-##print np.mean(velocity)
-##print scipy.stats.sem(velocity) #standard error in width
-##print np.mean(periodm)
-##print scipy.stats.sem(periodm) #standard error in width
-#
-##DAT = np.asarray([dday[int(len(dday)/2)], year[int(len(dday)/2)], 
-##                       np.mean(ch0), scipy.stats.sem(ch0), 
-##                       np.mean(ch0[ch0_maxf]), scipy.stats.sem(ch0[ch0_maxf]), 
-##                       np.mean(peak_dday_width), scipy.stats.sem(peak_dday_width),
-##                       peak_angle_width_f.min(), scipy.stats.sem(peak_angle_width_f)[0],
-##                       peak_angle_width_f.mean(), scipy.stats.sem(peak_angle_width_f).mean(),
-##                       peak_angle_width_f.max(), scipy.stats.sem(peak_angle_width_f)[1],
-##                       np.mean(velocity), scipy.stats.sem(velocity),
-##                       np.mean(periodm), scipy.stats.sem(periodm)
-##                       ])
-#
-#statdata = "statdata" + str(this_sat) + ".txt"
-#with open(statdata, 'a') as f:
-#    DAT = np.asarray([dday[int(len(dday)/2)], year[int(len(dday)/2)], 
-#                       np.mean(ch0), scipy.stats.sem(ch0), 
-#                       np.mean(ch0[ch0_maxf]), scipy.stats.sem(ch0[ch0_maxf]), 
-#                       np.mean(peak_dday_width), scipy.stats.sem(peak_dday_width),
-#                       peak_angle_width_f.min(), scipy.stats.sem(peak_angle_width_f)[0],
-#                       peak_angle_width_f.mean(), scipy.stats.sem(peak_angle_width_f).mean(),
-#                       peak_angle_width_f.max(), scipy.stats.sem(peak_angle_width_f)[1],
-#                       np.mean(velocity), scipy.stats.sem(velocity),
-#                       np.mean(periodm), scipy.stats.sem(periodm)
-#                       ])
-#    #print DAT
-#    #fmt='%i %i %f %f %f %f'
-#    np.savetxt(f, DAT[None], fmt='%f %i %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f')
-#    print 'Data writen to file.'
+satlist = []
+satlist.extend([41,48])
+satlist.extend([53,54,55,56,57,58,59])
+satlist.extend([60,61,62,63,64,65,66,67,68,69])
+satlist.extend([70,71,72,73])
+          
+method2_plot(satlist)
