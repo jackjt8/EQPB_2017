@@ -56,8 +56,12 @@ def load_data(this_sat,cdstart,cdend,localpath):
     
     
     if len(output_data[this_sat]) != 0: # Seems to throw NoneType for 2005-08-14 ->20
-        ddata = output_data[this_sat]['dropped_data']
-        index2drop = [i for i, j in enumerate(ddata) if j == 1]
+        #ddata = output_data[this_sat]['dropped_data']
+        #index2drop = [i for i, j in enumerate(ddata) if j == 1]
+        ddata = np.array([i for i, j in enumerate(output_data[this_sat]['dropped_data']) if j == 1])
+        dalt = np.array([i for i, j in enumerate(output_data[this_sat]['Rad_Re']) if j <= 3.5 or j >= 4.75])
+    
+        index2drop = np.unique(np.concatenate((ddata,dalt)))
         
         if len(ddata) * 0.5 <= len(index2drop): # ie we must have at least 50% usuable data.
             print 'High drop rate. Skipping.'
@@ -67,7 +71,7 @@ def load_data(this_sat,cdstart,cdend,localpath):
         
         dday =  output_data[this_sat]['decimal_day']
         dday[:] = [x - 1 for x in dday] # apply the -1 offset to dday as well..
-        dday_dropped = np.delete(dday,index2drop)
+#        dday_dropped = np.delete(dday,index2drop)
 
         #%%
         """ Seems there's an issue with the collection interval being not uniform, despite the
@@ -75,54 +79,60 @@ def load_data(this_sat,cdstart,cdend,localpath):
             in dday in order to maintain fine structure.
         """
         dday = np.array(dday)
-        dday_old = dday # Save dday for comparision.
+#        dday_old = dday # Save dday for comparision.
         dday = dday.flatten()
-        ddayx = np.array(range(len(dday)))
-        ddayx_new = np.linspace(0,len(dday),len(dday)*2)
-        dday = np.interp(ddayx_new, ddayx, dday)      
+        dday = np.delete(dday,index2drop)
+#        ddayx = np.array(range(len(dday)))
+#        ddayx_new = np.linspace(0,len(dday),len(dday)*2)
+#        dday = np.interp(ddayx_new, ddayx, dday)      
         
         #%%
 
         year = output_data[this_sat]['year']
         year = np.delete(year,index2drop)
-        year = np.interp(dday,dday_dropped,year) # Needs to be interp'ed.
+#        year = np.interp(dday,dday_dropped,year) # Needs to be interp'ed.
         
         temp_ecr = np.asarray(output_data[this_sat]['rate_electron_measured']) 
         temp2_ecr = np.delete(temp_ecr,index2drop,0)
-        temp3_ecr = np.array([np.interp(dday, dday_dropped, temp2_ecr[:,i]) for i in range(int(temp2_ecr.shape[1]))])
-        ecr = temp3_ecr.T
+#        temp3_ecr = np.array([np.interp(dday, dday_dropped, temp2_ecr[:,i]) for i in range(int(temp2_ecr.shape[1]))])
+        #ecr = temp3_ecr.T
+        ecr = temp2_ecr
         # save RAM once we are finished.
         del temp_ecr 
         del temp2_ecr
         
         temp_pcr = np.asarray(output_data[this_sat]['rate_proton_measured'])
         temp2_pcr = np.delete(temp_pcr,index2drop,0)
-        temp3_pcr = np.array([np.interp(dday, dday_dropped, temp2_pcr[:,i]) for i in range(int(temp2_pcr.shape[1]))])
-        pcr = temp3_pcr.T
+        #temp3_pcr = np.array([np.interp(dday, dday_dropped, temp2_pcr[:,i]) for i in range(int(temp2_pcr.shape[1]))])
+        #pcr = temp3_pcr.T
+        pcr = temp2_pcr
         del temp_pcr # save RAM once we are finished.
         del temp2_pcr # save RAM once we are finished.
         
         temp_alt = output_data[this_sat]['Rad_Re']
         temp2_alt = np.delete(temp_alt,index2drop)
-        satalt = np.interp(dday, dday_dropped, temp2_alt)
+        #satalt = np.interp(dday, dday_dropped, temp2_alt)
+        satalt = temp2_alt
         del temp_alt # save RAM once we are finished.
         del temp2_alt # save RAM once we are finished.
         
         temp_bheight = output_data[this_sat]['b_coord_height']
         temp2_bheight = np.delete(temp_bheight,index2drop)
-        bheight = np.interp(dday, dday_dropped, temp2_bheight)
+        #bheight = np.interp(dday, dday_dropped, temp2_bheight)
+        bheight = temp2_bheight
         del temp_bheight # save RAM once we are finished.
         del temp2_bheight # save RAM once we are finished.
         
         temp_lon = output_data[this_sat]['Geographic_Longitude']
         temp2_lon = np.delete(temp_lon,index2drop)
-        sat_lon = np.interp(dday, dday_dropped, temp2_lon)
+        #sat_lon = np.interp(dday, dday_dropped, temp2_lon)
+        sat_lon = temp2_lon
         del temp_lon
         del temp2_lon
         
         del output_data # save RAM once we are finished.
         del index2drop # save RAM once we are finished.
-        del dday_dropped # save RAM once we are finished.
+#        del dday_dropped # save RAM once we are finished.
         gc.collect()
         
         ourdates = []
@@ -180,10 +190,10 @@ def turning_points(array):
         
 
 
-def plot(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle):
+def plot(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon):
     #%%
         #!!!
-        fig = plt.figure(figsize=(40, 30), dpi=160)
+        fig = plt.figure(figsize=(20, 15), dpi=80)
         #fig = plt.figure(figsize=(4, 3), dpi=80)
         gs1 = gridspec.GridSpec(11, 6) #7,6
         gs1.update(wspace=0.15, hspace=0.15)
@@ -574,6 +584,203 @@ def plot(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle):
         plt.close(fig) #cleanup
     
 #%%
+        
+def plot2(this_sat, cdstart, cdend, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon):
+    #%%
+        #!!!
+        fig = plt.figure(figsize=(20, 15), dpi=80)
+        #fig = plt.figure(figsize=(4, 3), dpi=80)
+        gs1 = gridspec.GridSpec(7, 6) #7,6
+        gs1.update(wspace=.6, hspace=.6)
+        #gs1.tight_layout(fig) 
+        
+        titletext = 'Raw data plots for svn%s' % (this_sat)
+        plt.suptitle(titletext, fontsize=20)
+        fig.canvas.draw()
+        
+        #%%
+        ax1 = plt.subplot(gs1[0:2,:])
+        #!!! Need horizontal line for global CH2 stddev * 4
+        
+        for i in range(int(ecr.shape[1])):
+            curlabel = 'Electron Channel %s' % (i)
+            plt.plot_date(ourmpldates,ecr[:,i], label=curlabel)
+        
+        #plt.plot_date(ourmpldates,ch2)
+        plt.ylabel('Electron rate', fontsize = 11)
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        # Setup grids
+        plt.minorticks_on()
+        minorLocator = AutoMinorLocator(4)
+        ax1.xaxis.set_minor_locator(minorLocator)
+        plt.grid(True, which='both')
+        ax1.yaxis.grid(False, which='minor')
+        # show legend
+        ax1.legend(fancybox=True)
+        
+        #%%
+        ax2 = plt.subplot(gs1[2,:],sharex=ax1)
+        plt.plot_date(ourmpldates,sat_lon, label='Sat Longitude')
+        
+        plt.ylabel('Longitude', fontsize = 11)
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        # Setup grids
+        plt.minorticks_on()
+        minorLocator = AutoMinorLocator(4)
+        ax2.xaxis.set_minor_locator(minorLocator)
+        plt.grid(True, which='both')
+        #ax2.yaxis.grid(False, which='minor') 
+        # show legend
+        ax2.legend(fancybox=True)
+        
+        # change axis location of ax2
+        pos1 = ax1.get_position()
+        pos2 = ax2.get_position()
+        points1 = pos1.get_points()
+        points2 = pos2.get_points()
+        points2[1][1]=points1[0][1]
+        pos2.set_points(points2)
+        ax2.set_position(pos2)
+        
+        ax2.set_ylim(-180,180)
+        
+        #%%
+        ax3 = plt.subplot(gs1[3,:],sharex=ax1)
+        plt.plot_date(ourmpldates,satalt, label='Sat Alt')
+        plt.ylabel('Altitude in \nEarth Radii (Re)', fontsize = 11)
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        #plt.xlabel('Date', fontsize  = 16)
+        # Setup grids
+        plt.minorticks_on()
+        minorLocator = AutoMinorLocator(4)
+        ax3.xaxis.set_minor_locator(minorLocator)
+        plt.grid(True, which='both')
+        ax3.yaxis.grid(False, which='minor') 
+        
+
+        ax3.legend(fancybox=True)
+         
+        # change axis location of ax3
+        pos2 = ax2.get_position()
+        pos3 = ax3.get_position()
+        points2 = pos2.get_points()
+        points3 = pos3.get_points()
+        points3[1][1]=points2[0][1]
+        pos3.set_points(points3)
+        ax3.set_position(pos3)
+        
+        #!!!
+        #ax1.set_xlim(mpld.date2num([cdstart,cdend]))
+        
+        #%%
+        
+        ax9 = plt.subplot(gs1[4,:])
+        plt.plot_date(ourmpldates,angle, label='Angle')
+        plt.ylabel('Satellite angle \nfrom horizon', fontsize = 11)
+        plt.xlabel('Date', fontsize  = 11)
+        # Setup grids
+        plt.minorticks_on()
+        minorLocator = AutoMinorLocator(4)
+        ax9.xaxis.set_minor_locator(minorLocator)
+        plt.grid(True, which='both')
+        #ax9.yaxis.grid(False, which='minor') 
+        
+        ax9.legend(fancybox=True)
+         
+        # change axis location of ax9
+        pos3 = ax3.get_position()
+        pos9 = ax9.get_position()
+        points3 = pos3.get_points()
+        points9 = pos9.get_points()
+        points9[1][1]=points3[0][1]
+        pos9.set_points(points9)
+        ax9.set_position(pos9)
+        
+        ax9.set_ylim(-90,90)
+        
+        #%%
+        ax4 = plt.subplot(gs1[5:7,:-3])
+        for i in range(int(ecr.shape[1])):
+            curlabel = 'Electron Channel %s' % (i)
+            plt.scatter(satalt,ecr[:,i], label=curlabel)
+        plt.ylabel('Electron rates', fontsize  = 11)
+        plt.xlabel('Altitude in Earth Radii (Re)', fontsize  = 11)
+        #plt.xlabel('Altitude in Earth Radii', fontsize = 16)
+        
+        
+        # Setup grids
+        plt.minorticks_on()
+        minorLocator = AutoMinorLocator(5)
+        ax4.xaxis.set_minor_locator(minorLocator)
+        plt.grid(True, which='both')
+        ax4.yaxis.grid(False, which='minor') 
+        
+        ax4.legend(fancybox=True)
+        
+        ax4.set_xlim(np.min(satalt), np.max(satalt))
+        
+        #%%
+        #ax5 = plt.subplot(gs1[5,:-3],sharex=ax4)
+
+        
+        #%%
+        
+        #ax10 = plt.subplot(gs1[6,:-3])
+
+        
+        #%%
+        ax6 = plt.subplot(gs1[5:7,3:])
+        
+        for i in range(int(ecr.shape[1])):
+            curlabel = 'Electron Channel %s' % (i)
+            plt.scatter(angle,ecr[:,i], label=curlabel)
+            
+        plt.ylabel('Electron rate', fontsize = 11)
+        plt.xlabel('Angle from horizon', fontsize  = 11)
+        # Setup grids
+        plt.minorticks_on()
+        minorLocator = AutoMinorLocator(4)
+        ax6.xaxis.set_minor_locator(minorLocator)
+        plt.grid(True, which='both')
+        ax6.yaxis.grid(False, which='minor') 
+        
+        ax6.legend(fancybox=True)
+        
+        #%%
+        
+        
+        #%%
+        
+#        ax8 = plt.subplot(gs1[6,:])
+#        
+#        plt.scatter(angle,satalt)   
+#        plt.ylabel('Altitude in Re', fontsize = 16)
+#        plt.xlabel('Angle from horizon', fontsize  = 16)
+#        # Setup grids
+#        plt.minorticks_on()
+#        minorLocator = AutoMinorLocator(4)
+#        ax8.xaxis.set_minor_locator(minorLocator)
+#        plt.grid(True, which='both')
+#        ax8.yaxis.grid(False, which='minor') 
+#        
+#        ax8.legend(fancybox=True)
+        
+        
+        #%%
+        
+        
+
+        
+        #%%
+        print '###PRE-SAVE###'
+        stemp = 'svn' + str(this_sat) + 'rawplot_' + str(cdstart.year) + '_' + str(cdstart.month) + '_' + str(cdstart.day) + '___' + str(cdend.year) + '_' + str(cdend.month) + '_' + str(cdend.day) + '.png'
+        #plt.show()
+        plt.savefig(stemp,bbox_inches="tight")
+        fig.clear() #cleanup
+        plt.clf() #cleanup
+        plt.cla() #cleanup
+        plt.close(fig) #cleanup
+        print 'SAVED'
   
 def smooth(y, box_pts):
     box = np.ones(box_pts)/box_pts
@@ -1011,6 +1218,8 @@ def method2_plot(satlist):
         #ax1.set_xlabel('Date', fontsize = 10)
         ax1.legend(fancybox=True)
         
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        
         #%%
         
         ax2 = plt.subplot(gs1[1,:],sharex=ax1)
@@ -1024,8 +1233,20 @@ def method2_plot(satlist):
         ax2.axhline(y=np.nanmean(pdw), label='Mean = %.2f' %(np.nanmean(pdw)), color='red' )
         ax2.axhline(y=np.nanmean(pdw)+np.nanstd(pdw), label='Standard Deviation = %.2f' %(np.nanstd(pdw)), color='green' )
         ax2.axhline(y=np.nanmean(pdw)-np.nanstd(pdw), color='green' )
-        ax2.set_ylabel('Collection width in decimal day', fontsize = 10)
+        ax2.set_ylabel('Collection width \nin decimal day', fontsize = 10)
         ax2.legend(fancybox=True)
+        
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        
+        
+        pos1 = ax1.get_position()
+        pos2 = ax2.get_position()
+        points1 = pos1.get_points()
+        points2 = pos2.get_points()
+        points2[1][1]=points1[0][1]
+        pos2.set_points(points2)
+        ax2.set_position(pos2)
+        
         
         #%%
         
@@ -1040,8 +1261,20 @@ def method2_plot(satlist):
         L3, = ax3.plot_date(ourmpldates, pawmean, label='peak angle width mean')
         L3, = ax3.plot_date(ourmpldates, pawmax, label='peak angle width max')
         
-        ax3.set_ylabel('Angular width in degrees', fontsize = 10)
+        ax3.set_ylabel('Angular width \nin degrees', fontsize = 10)
         ax3.legend(fancybox=True)
+        
+        plt.setp(ax3.get_xticklabels(), visible=False)
+        
+        pos2 = ax2.get_position()
+        pos3 = ax3.get_position()
+        points2 = pos2.get_points()
+        points3 = pos3.get_points()
+        points3[1][1]=points2[0][1]
+        pos3.set_points(points3)
+        ax3.set_position(pos3)
+        
+        ax3.set_ylim(-80,80)
         
         #%%
         
@@ -1061,6 +1294,15 @@ def method2_plot(satlist):
         ax4.set_xlabel('Decimal Day', fontsize = 10)
         ax4.legend(fancybox=True)
         
+        pos3 = ax3.get_position()
+        pos4 = ax4.get_position()
+        points3 = pos3.get_points()
+        points4 = pos4.get_points()
+        points4[1][1]=points3[0][1]
+        pos4.set_points(points4)
+        ax4.set_position(pos4)
+        
+        ax3.set_ylim(0,100)
     
         #%%
         # Force x-axis...
@@ -1090,9 +1332,9 @@ def main():
     
     localpath = abspath(getsourcefile(lambda:0))[:-12]
     satlist = []
-#    satlist.extend([41,48])
+    satlist.extend([41,48])
 #    satlist.extend([53,54,55,56,57,58,59])
-    satlist.extend([60,61,62,63,64,65,66,67,68,69])
+#    satlist.extend([60,61,62,63,64,65,66,67,68,69])
 #    satlist.extend([70,71,72,73])
 #    satlist = [41]
     
@@ -1128,6 +1370,8 @@ def main():
             if len(ecr) > 10:
                 #fit(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon)
                 method2(this_sat, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon)
+                plot2(this_sat, cdstart, cdend, ecr, pcr, dday, year, satalt, bheight, ourmpldates, angle, sat_lon)
+                #sys.exit(0)
             print ' '
         # plot
         
@@ -1139,14 +1383,12 @@ def main():
             gc.collect()
             break
         
-#if __name__ == '__main__':
-#    main()
+if __name__ == '__main__':
+    main()
   
-
-satlist = []
-satlist.extend([41,48])
-satlist.extend([53,54,55,56,57,58,59])
-satlist.extend([60,61,62,63,64,65,66,67,68,69])
-satlist.extend([70,71,72,73])
-          
-method2_plot(satlist)
+#satlist = []
+#satlist.extend([41,48])
+#satlist.extend([53,54,55,56,57,58,59])
+#satlist.extend([60,61,62,63,64,65,66,67,68,69])
+#satlist.extend([70,71,72,73])
+#method2_plot(satlist)
