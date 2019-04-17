@@ -1,4 +1,5 @@
 # EQPB_2017
+Sourcecode for final year project on **High-energy particle bursts detected by GPS satellites in the outer Van Allen Radiation belt as pre-seismic indicators** - Project report is labeled Final dissertation.docx; I do not have access to Microsoft Word so porting it to pdf is not possible at this time however, should it be requested, it could be done.
 
 Built in/for Python 2.7.13 (64 bit) -- Anaconda
 
